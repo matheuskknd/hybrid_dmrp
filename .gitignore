@@ -1,0 +1,8 @@
+.venv/*
+.vscode/*
+**/__pycache__/*
+htmlcov/*
+.coverage
+
+README.html
+README.pdf

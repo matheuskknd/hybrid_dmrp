@@ -1,0 +1,3 @@
+[submodule "brkga_mp_ipr_python"]
+	path = brkga/brkga_mp_ipr_python
+	url = https://github.com/ceandrade/brkga_mp_ipr_python
