@@ -41,7 +41,7 @@ python -m pip install -r requirements.txt
 Then the following to execute the main code:
 
 ```bash
-python -m brkga
+python -m hybrid_dmrp instances/instancia1Tijuca_0.6.csv
 ```
 
 ### Dependencies

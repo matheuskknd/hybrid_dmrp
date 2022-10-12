@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+import sys
 from brkga_mp_ipr.algorithm import BrkgaMpIpr
 from brkga_mp_ipr.types import BrkgaParams
 from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
 import random
-
+from .PreProcessing import read_input
 from .BRKGADecoder import Decoder
 
 
-def main():
-  sampleReachMatrix: list[list[int]] = [
-    [2],
-    [2],
-    [0, 1],
-  ]
+def main(instance_file, str_nb_drones):
+  nb_trucks = int(str_nb_drones)
 
+  (all_distances, base_distance, comunicacoes) = read_input(instance_file)
+  getMinimumDominatingSet(comunicacoes)
+
+
+def getMinimumDominatingSet(sampleReachMatrix):
   # BRKGA decoder
   decoder: Decoder = Decoder(sampleReachMatrix)
 
@@ -52,5 +54,12 @@ def main():
 
 
 # Execute the main function
-if __name__ == "__main__":
-  main()
+if __name__ == '__main__':
+  if len(sys.argv) < 2:
+    print("Usage: python pcvr.py input_file [output_file] [time_limit] [nb_trucks]")
+    sys.exit(1)
+
+  instance_file = sys.argv[1]
+  print("Utilizando arquivo de entrada: ", instance_file)
+  print()
+  main(instance_file, "1")

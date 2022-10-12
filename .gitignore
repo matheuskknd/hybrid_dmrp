@@ -1,5 +1,7 @@
 .venv/*
 .vscode/*
+instances/*
+instancesTestLocalSolver/*
 **/__pycache__/*
 htmlcov/*
 .coverage
