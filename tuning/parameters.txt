@@ -1,0 +1,4 @@
+### Parameter file
+# name           label                 type  range            [conditions (using R syntax)]
+num_generations  "--num-generations "  c     (100,250,500)
+population_size  "--population-size "  c     (25,50,75,100)

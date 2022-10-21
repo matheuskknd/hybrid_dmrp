@@ -1,0 +1,36 @@
+# Each line is an instance relative to trainInstancesDir
+# (see scenario.txt) and an optional sequence of instance-specific
+# parameters that will be passed to target-runner when invoked on that
+# instance.
+
+# Empty lines and comments are ignored.
+
+instancia1PedraBranca.csv
+instancia1PedraBranca_0.6.csv
+instancia1PedraBranca_0.7.csv
+instancia1PedraBranca_0.9.csv
+instancia1Tijuca.csv
+instancia1Tijuca_0.6.csv
+instancia1Tijuca_0.7.csv
+instancia1Tijuca_0.9.csv
+instancia2Tijuca.csv
+instancia2Tijuca_0.6.csv
+instancia2Tijuca_0.7.csv
+instancia2Tijuca_0.9.csv
+instancia3Tijuca.csv
+instancia3Tijuca_0.6.csv
+instancia3Tijuca_0.7.csv
+instancia3Tijuca_0.9.csv
+instancia4Tijuca.csv
+instancia4Tijuca_0.6.csv
+instancia4Tijuca_0.7.csv
+instancia4Tijuca_0.9.csv
+instanciaTijucaTeste.csv
+instancia_10.csv
+instancia_20.csv
+instancia_20_100.csv
+instancia_20_50.csv
+instancia_20_50_bkp.csv
+instancia_30_225.csv
+instancia_40_400.csv
+instancia_5.csv

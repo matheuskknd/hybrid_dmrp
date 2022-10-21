@@ -15,12 +15,15 @@ def main(instance_file, str_nb_drones):
   nb_trucks = int(str_nb_drones)
 
   (all_distances, base_distance, comunicacoes) = read_input(instance_file)
-  getMinimumDominatingSet(comunicacoes)
+  minimumDominatingSet: set[int] = getMinimumDominatingSet(comunicacoes)
+
+  # Required for IRace - IT MUST BE THE LAST THING PRINTED
+  print(f"{float(len(minimumDominatingSet))}")
 
 
-def getMinimumDominatingSet(sampleReachMatrix):
+def getMinimumDominatingSet(communicationMatrix: list[list[int]]) -> set[int]:
   # BRKGA decoder
-  decoder: Decoder = Decoder(sampleReachMatrix)
+  decoder: Decoder = Decoder(communicationMatrix)
 
   # BRKGA parameters
   params: BrkgaParams = BrkgaParams()
@@ -41,7 +44,7 @@ def getMinimumDominatingSet(sampleReachMatrix):
   # BRKGA object
   ga: BrkgaMpIpr = BrkgaMpIpr(decoder, Sense.MINIMIZE,
                               seed=random.randint(1, 1000),
-                              chromosome_size=len(sampleReachMatrix),
+                              chromosome_size=len(communicationMatrix),
                               params=params)
 
   # Run the BRKGA
@@ -50,11 +53,16 @@ def getMinimumDominatingSet(sampleReachMatrix):
   bestSoFar: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
 
   # Debug - print the best solution ever found
-  print(bestSoFar)
+  print("Minimum dominating set: ", bestSoFar)
+  return bestSoFar
 
 
 # Execute the main function
 if __name__ == '__main__':
+  # Debug for the input parameters
+  # with open("debug_params.txt","a") as debug_params:
+  #   debug_params.write(str(sys.argv) + "\n")
+
   if len(sys.argv) < 2:
     print("Usage: python pcvr.py input_file [output_file] [time_limit] [nb_trucks]")
     sys.exit(1)

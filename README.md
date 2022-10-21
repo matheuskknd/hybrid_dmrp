@@ -38,7 +38,13 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Then the following to execute the main code:
+Unpack the problem instances:
+
+```bash
+python -c "import shutil; shutil.unpack_archive('instances.zip')"
+```
+
+Execute the main code:
 
 ```bash
 python -m hybrid_dmrp instances/instancia1Tijuca_0.6.csv
