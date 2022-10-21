@@ -29,7 +29,7 @@ CONFIG_PARAMS=$*
 
 # Go to parent directory
 cd ..
-PDW="$(PWD)"
+PDW="$(pwd)"
 
 # Path to the module (module name):
 MODULE="hybrid_dmrp"

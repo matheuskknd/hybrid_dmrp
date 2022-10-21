@@ -10,6 +10,7 @@ Inside this file directory execute one of the following:
 Linux
 
 ```bash
+chmod +x target-runner.sh
 irace --target-runner target-runner.sh --scenario scenario.txt --check
 ```
 
