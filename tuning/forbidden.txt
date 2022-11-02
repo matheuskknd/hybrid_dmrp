@@ -9,3 +9,9 @@
 ## then the configuration is discarded.
 ##
 ## Examples of valid logical operators are: ==  !=  >=  <=  >  <  &  |  !  %in%
+
+# Avoid impossible or fully greedy configurations
+num_elite_parents >= total_parents
+
+# Avoid impossible configurations (Elit Set Size)
+num_elite_parents > floor(population_size * elite_percentage)

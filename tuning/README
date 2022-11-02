@@ -20,6 +20,22 @@ Windows
 irace --target-runner target-runner.cmd --scenario scenario.txt --check
 ```
 
+## Executing the scenario
+
+Always test the enviroment before running the scenario, some parts of the target-runner script first run won't work if parallelized. So, inside this file directory, execute one of the following:
+
+Linux
+
+```bash
+irace --target-runner target-runner.sh --scenario scenario.txt --parallel <number_of_parallel_executions>
+```
+
+Windows
+
+```cmd
+irace --target-runner target-runner.cmd --scenario scenario.txt --parallel <number_of_parallel_executions>
+```
+
 ## Installing IRace on Ubuntu 20.04.5 LTS (Focal)
 
 In your ```/etc/apt/sources.list``` file add the following line:
@@ -62,7 +78,7 @@ system.file(package = "irace")
 q()
 ```
 
-Then add the package script path to environment variable ```$PATH```:
+Add the package script path to the environment variable ```$PATH```:
 
 ```bash
 echo 'export PATH="$PATH:<irace_package_path>/bin"' >>~/.bashrc

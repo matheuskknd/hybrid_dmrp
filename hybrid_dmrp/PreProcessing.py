@@ -1,14 +1,17 @@
+#!/usr/bin/env python3.10
+# -*- coding: UTF-8 -*-
+
+from typing import TextIO
 from haversine import haversine
-import sys
 
 
-def read_elem(filename):
-  with open(filename) as f:
-    return [str(elem) for elem in f.read().split()]
+def read_elem(instance: TextIO) -> list[str]:
+  with instance:
+    return instance.read().split()
 
 
-def read_input(filename):
-  file_it = iter(read_elem(sys.argv[1]))
+def read_input(instance: TextIO):
+  file_it = iter(read_elem(instance))
 
   str_nb_nodes = next(file_it)
   nb_nodes = int(str_nb_nodes)
@@ -28,12 +31,16 @@ def read_input(filename):
     str_communicationRadius = next(file_it)
 
     coordenates[i] = (float(x_coordenates), float(y_coordenates))
-    print('Coordenada do nó', i+1, '=', coordenates[i])
+    print('Coordenada do nó', i + 1, '=', coordenates[i])
 
   print('\n[OBS: Todas as medidas de distância utilizadas neste programa estão em metros.]')
-  distance_matrix = compute_distance_matrix(str_nb_nodes, coordenates)  #matriz com a dist calculada entre as coordenadas de cada sensor
-  distance_from_base = compute_distance_from_base(str_nb_nodes, coordenates, base)  #lista com a dist calculada entre a base e cada node
-  communication_net = compute_communication_net(str_nb_nodes, str_communicationRadius, coordenates)  #Lista de elementos dentro do raio de comunicação
+  distance_matrix = compute_distance_matrix(str_nb_nodes,
+                                            coordenates)  #matriz com a dist calculada entre as coordenadas de cada sensor
+  distance_from_base = compute_distance_from_base(str_nb_nodes, coordenates,
+                                                  base)  #lista com a dist calculada entre a base e cada node
+  communication_net = compute_communication_net(str_nb_nodes,
+                                                str_communicationRadius,
+                                                coordenates)  #Lista de elementos dentro do raio de comunicação
 
   return (distance_matrix, distance_from_base, communication_net)
 
@@ -43,7 +50,8 @@ def haversineCalculation(point1, point2):
 
 
 def compute_distance_matrix(qtd, points):
-  distance_matrix = [[0 for i in range(int(qtd))] for j in range(int(qtd))]  #matriz quadrada de tam igual ao num de nodes.
+  distance_matrix = [[0 for i in range(int(qtd))] for j in range(int(qtd))
+                     ]  #matriz quadrada de tam igual ao num de nodes.
 
   #TEMPLATE => i = coordenadaX (latitude), j = coordenadasY (longitude)
 
@@ -62,7 +70,7 @@ def compute_distance_matrix(qtd, points):
         distance_matrix[j][i] = dist
         # print('Distancia entre nó', i+1, 'e nó', j+1, ':', dist)
       except:
-        print('Nao conseguiu calcular a distancia entre: ', i+1, ' e ', j+1)
+        print('Nao conseguiu calcular a distancia entre: ', i + 1, ' e ', j + 1)
         continue
   # print()
   # print(distance_matrix)
@@ -88,7 +96,8 @@ def compute_distance_from_base(qtd, points, base):
 
 
 def compute_communication_net(qtd, radius, points):
-  net_matrix = [[] for i in range(int(qtd))]  #lista que guarda comunicacao dos nodes pra cada node.
+  net_matrix = [[] for i in range(int(qtd))
+                ]  #lista que guarda comunicacao dos nodes pra cada node.
 
   #nodesRelacionados = []
   for i in range(int(qtd) - 1):
@@ -97,12 +106,12 @@ def compute_communication_net(qtd, radius, points):
       if i == j: continue
       try:
         dist = haversineCalculation(points[i], points[j])
-        if dist < int(radius) * 2:          
+        if dist < int(radius) * 2:
           #nodesRelacionados.append(j+1)
-          net_matrix[i].append(j+1)
+          net_matrix[i].append(j + 1)
       except:
-        print('Nao conseguiu calcular a distancia entre: ', i+1, ' e ', j+1)
-    print('Nó', i+1, 'se comunica com:', net_matrix[i])
-    
+        print('Nao conseguiu calcular a distancia entre: ', i + 1, ' e ', j + 1)
+    print('Nó', i + 1, 'se comunica com:', net_matrix[i])
+
   print(net_matrix)
   return net_matrix

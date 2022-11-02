@@ -1,4 +1,8 @@
 ### Parameter file
-# name           label                 type  range            [conditions (using R syntax)]
-num_generations  "--num-generations "  c     (100,250,500)
-population_size  "--population-size "  c     (25,50,75,100)
+# name             label                    type  range            [conditions (using R syntax)]
+num_generations    "--num-generations "     i     (100,500)
+population_size    "--population-size "     i     (25,100)
+elite_percentage   "--elite-percentage "    r     (0.10,0.30)
+mutants_percentage "--mutants-percentage "  r     (0.10,0.30)
+total_parents      "--total-parents "       i     (2,3)
+num_elite_parents  "--num-elite-parents "   i     (1,2)

@@ -25,7 +25,6 @@ instancia4Tijuca.csv
 instancia4Tijuca_0.6.csv
 instancia4Tijuca_0.7.csv
 instancia4Tijuca_0.9.csv
-instanciaTijucaTeste.csv
 instancia_10.csv
 instancia_20.csv
 instancia_20_100.csv

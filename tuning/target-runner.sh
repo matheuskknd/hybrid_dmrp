@@ -23,6 +23,9 @@ INSTANCE_ID="$2"
 SEED="$3"
 INSTANCE="$4"
 
+# Fixed parameters
+FIXED_PARAMS="--quiet"
+
 # All other parameters are the candidate parameters to be passed to program
 shift 4 || error "Not enough parameters"
 CONFIG_PARAMS=$*
@@ -40,14 +43,8 @@ fi
 
 # Create an empty folder to store the logs
 if [ ! -d "tuning/output" ]; then
-    mkdir "tuning/output"
-else
-    rm -rf "tuning/output"
-    mkdir "tuning/output"
+    mkdir "tuning/output" >"/dev/null" 2>&1 || [ -d "tuning/output" ] || error "$MODULE: error creating output directory."
 fi
-
-STDOUT="$PDW/tuning/output/c${CONFIG_ID}-${INSTANCE_ID}-${SEED}.stdout"
-STDERR="$PDW/tuning/output/c${CONFIG_ID}-${INSTANCE_ID}-${SEED}.stderr"
 
 # Check for python3.10 installation
 if ! { command -V "python3.10" >"/dev/null" 2>&1; }; then
@@ -73,30 +70,43 @@ if ! { python -m pip install -r requirements.txt --no-index >"/dev/null" 2>&1; }
     error "Ensure all dependencies are installed then try again"
 fi
 
-# Effectivelly execute the program
-python -m "$MODULE" "${INSTANCE//\?/ }" --seed "$SEED" $CONFIG_PARAMS 1>"$STDOUT" 2>"$STDERR"
+# Create an auxiliar stderr FIFO pipe
+FILE_NAME="$PDW/tuning/output/c${CONFIG_ID}-${INSTANCE_ID}-${SEED}"
 
-# Check if the output file exists
-if [ ! -s "$STDOUT" ]; then
-    error "$STDOUT: No such file"
+mkfifo "$FILE_NAME.pipe"
+{ STDERR=$(cat <"$FILE_NAME.pipe"); printf "$STDERR" >"$FILE_NAME.pipe"; } &
+
+# Effectivelly execute the program
+STDOUT=$(python -m "$MODULE" "${INSTANCE//\?/ }" $FIXED_PARAMS --seed "$SEED" $CONFIG_PARAMS 2>"$FILE_NAME.pipe")
+
+STDERR=$(cat <"$FILE_NAME.pipe")
+unlink "$FILE_NAME.pipe"
+
+# Check the error output is empty
+if [ -n "$STDERR" ] ; then
+    printf "$STDOUT" >"$FILE_NAME.stdout"
+    printf "$STDERR" >"$FILE_NAME.stderr"
+    error "Configuration '$FILE_NAME' error"
 fi
 
-OUTPUT_LAST_LINE=$(tail --lines=1 "$STDOUT")
-COST=$(echo "$OUTPUT_LAST_LINE" | cut -d' ' -f1)
-TIME=$(echo "$OUTPUT_LAST_LINE" | cut -d' ' -f2)
+OUTPUT_LAST_LINE=$(printf "$STDOUT" | tail --lines=1)
+COST=$(printf "$OUTPUT_LAST_LINE" | cut -d' ' -f1)
+TIME=$(printf "$OUTPUT_LAST_LINE" | cut -d' ' -f2)
 
 if ! [[ "$COST" =~ ^[-+0-9.e]+$ ]] ; then
-    error "${STDOUT}: Output cost is not a number"
+    printf "$STDOUT" >"$FILE_NAME.stdout"
+    printf "$STDERR" >"$FILE_NAME.stderr"
+    error "Configuration '$FILE_NAME': Output cost is not a number"
 fi
 
 if ! [[ "$TIME" =~ ^[-+0-9.e]+$ ]] ; then
-    error "${TIME}: Output time is not a number"
+    printf "$STDOUT" >"$FILE_NAME.stdout"
+    printf "$STDERR" >"$FILE_NAME.stderr"
+    error "Configuration '$FILE_NAME': Output time is not a number"
 fi
 
 # Print the result!
-echo "$COST $TIME"
+printf "$COST $TIME"
 
-# We are done with our duty. Clean files and exit with 0 (no error).
-rm -f "${STDOUT}" "${STDERR}"
-rm -f best.* stat.* cmp.*
+# We are done with our duty. Exit with 0 (no error).
 exit 0
