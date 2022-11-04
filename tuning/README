@@ -1,4 +1,4 @@
-# Tunning scenario for Irace
+# Tunning scenario for IRace
 ---
 
 This directory contains the files used by IRace to tune the optimization algorithm.

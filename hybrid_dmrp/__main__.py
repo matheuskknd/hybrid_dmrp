@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from .PreProcessing import read_input
+from .VehicleRouting import getMininumVehicleRouting
 from .MinimumDominatingSet import getMinimumDominatingSet
 from typing import TextIO
 from argparse import (ArgumentParser, FileType, Namespace)
@@ -33,6 +34,10 @@ def main(instance: TextIO, nb_drones: int, *, quiet: bool, seed: int,
       population_size=population_size, elite_percentage=elite_percentage,
       mutants_percentage=mutants_percentage, total_parents=total_parents,
       num_elite_parents=num_elite_parents)
+
+    getMininumVehicleRouting(allDistances=all_distances,
+                             baseDistance=base_distance,
+                             minimumDominatingSet=minimumDominatingSet)
 
   # Required for IRace - IT MUST BE THE LAST THING PRINTED
   print(f"{len(minimumDominatingSet):.2f} {timeit.default_timer() - startTime:.2f}")

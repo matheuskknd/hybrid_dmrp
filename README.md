@@ -1,5 +1,7 @@
 # Setup after download
 
+First of all, the [Local Solver](https://www.localsolver.com/) must be installed on your local [Windows](https://www.localsolver.com/docs/last/exampletour/vrp.html) or [Linux](https://www.localsolver.com/docs/last/installation/installationonlinux.html) machine. As well as Python3.10 or newer.
+
 Execute the following to enter a virtual environment depending on your terminal interpreter:
 
 Bash (Linux)
@@ -9,6 +11,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install localsolver -i "https://pip.localsolver.com"
 ```
 
 Bash (Windows)
@@ -18,6 +21,7 @@ python3 -m venv .venv
 source .venv/Scripts/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install localsolver -i "https://pip.localsolver.com"
 ```
 
 CMD
@@ -27,6 +31,7 @@ python3 -m venv .venv
 .venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install localsolver -i "https://pip.localsolver.com"
 ```
 
 Power Shell
@@ -36,6 +41,7 @@ python3 -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install localsolver -i "https://pip.localsolver.com"
 ```
 
 Unpack the problem instances:
