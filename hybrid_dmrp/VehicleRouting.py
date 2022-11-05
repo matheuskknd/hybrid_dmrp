@@ -21,16 +21,18 @@ def convertMinimumDominatingSet(
   # Save a mapping for the previous indexes
   convertionMap: dict[int, int] = dict()
 
-  for i in range(len(baseDistance)):
-    if i in minimumDominatingSet:
-      newBaseDistance.append(baseDistance[i])
+  for i in range(1, len(baseDistance)+1):
+    index = i-1
+    if i in minimumDominatingSet:      
+      newBaseDistance.append(baseDistance[index])
       newAllDistances.append([])
 
-      convertionMap[len(newAllDistances) - 1] = i
+      convertionMap[len(newAllDistances)] = index
 
-      for j in range(len(baseDistance)):
+      for j in range(1, len(baseDistance)+1):
+        index2 = j-1
         if j in minimumDominatingSet:
-          newAllDistances[-1].append(allDistances[i][j])
+          newAllDistances[-1].append(allDistances[index][index2])
 
   return (newAllDistances, newBaseDistance, convertionMap)
 

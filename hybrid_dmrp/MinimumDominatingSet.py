@@ -28,23 +28,23 @@ class BRKGADecoder:
     # Auxliar list for sorting by gene value
     sortedByGeneList: list[Item] = [
       Item(i, chromosome[i]) for i in range(self.N)
-    ]
+    ]    
     sortedByGeneList.sort(key=lambda t: t.gene, reverse=True)
 
     # Auxliar list for recording visited nodes
     visitedList: list[bool] = self.N * [False]
-
+    
     # Set of nodes to visit
     selectedNodeSet: set[int] = set()
-
+    
     for i in sortedByGeneList:
       if not visitedList[i.index]:
-        selectedNodeSet.add(i.index)
+        selectedNodeSet.add(i.index +1)
 
         # Mark i and its neighboors as visited
-        visitedList[i.index] = True
+        visitedList[i.index -1] = True
         for j in self._reachMatrix[i.index]:
-          visitedList[j] = True
+          visitedList[j-1] = True
 
     return selectedNodeSet
 
