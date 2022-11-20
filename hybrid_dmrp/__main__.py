@@ -2,20 +2,20 @@
 # -*- coding: UTF-8 -*-
 
 from .PreProcessing import read_input
-from .VehicleRouting import getMininumVehicleRouting
-from .MinimumDominatingSet import getMinimumDominatingSet
-from typing import TextIO
+from .MinimumDominatingSet import solveHybriDMRP
 from argparse import (ArgumentParser, FileType, Namespace)
 from contextlib import redirect_stdout
+from typing import TextIO
 from io import StringIO
 import random
 import timeit
 import sys
 
 
-def main(instance: TextIO, nb_drones: int, *, quiet: bool, seed: int,
-         num_generations: int, population_size: int, elite_percentage: float,
+def main(instance: TextIO, *, quiet: bool, seed: int, num_generations: int,
+         population_size: int, elite_percentage: float,
          mutants_percentage: float, total_parents: int, num_elite_parents: int):
+
   # Disable debug printing
   devNull: StringIO = StringIO()
   devNull.write = lambda x: len(x)
@@ -24,23 +24,24 @@ def main(instance: TextIO, nb_drones: int, *, quiet: bool, seed: int,
   with redirect_stdout(devNull if quiet else sys.stdout):
     # Read the instance file
     (all_distances, base_distance, comunicacoes) = read_input(instance)
+    assert len(all_distances[0]) == len(base_distance)
 
     # Account the time spent running the metaheuristics
     startTime: float = timeit.default_timer()
 
-    # Calculates the minimum dominating set
-    minimumDominatingSet: set[int] = getMinimumDominatingSet(
-      comunicacoes, seed=seed, num_generations=num_generations,
-      population_size=population_size, elite_percentage=elite_percentage,
-      mutants_percentage=mutants_percentage, total_parents=total_parents,
-      num_elite_parents=num_elite_parents)
-
-    getMininumVehicleRouting(allDistances=all_distances,
-                             baseDistance=base_distance,
-                             minimumDominatingSet=minimumDominatingSet)
+    # Execute the hybrid heuristics
+    solutionCost: float = solveHybriDMRP(all_distances, base_distance,
+                                         comunicacoes, seed=seed,
+                                         num_generations=num_generations,
+                                         population_size=population_size,
+                                         elite_percentage=elite_percentage,
+                                         mutants_percentage=mutants_percentage,
+                                         total_parents=total_parents,
+                                         num_elite_parents=num_elite_parents,
+                                         quiet=quiet)
 
   # Required for IRace - IT MUST BE THE LAST THING PRINTED
-  print(f"{len(minimumDominatingSet):.2f} {timeit.default_timer() - startTime:.2f}")
+  print(f"{solutionCost:.2f} {timeit.default_timer() - startTime:.2f}")
 
 
 # Execute the main function
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     #   debug_params.write(str(parsedArgs) + "\n")
 
     # Effectivelly executes the main function
-    main(parsedArgs.instance, 1, quiet=parsedArgs.quiet, seed=parsedArgs.seed,
+    main(parsedArgs.instance, quiet=parsedArgs.quiet, seed=parsedArgs.seed,
          num_generations=parsedArgs.num_generations,
          population_size=parsedArgs.population_size,
          elite_percentage=parsedArgs.elite_percentage,

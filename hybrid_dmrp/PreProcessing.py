@@ -50,8 +50,10 @@ def haversineCalculation(point1, point2):
 
 
 def compute_distance_matrix(qtd, points):
-  distance_matrix = [[0 for i in range(int(qtd))] for j in range(int(qtd))
-                      ]  #matriz quadrada de tam igual ao num de nodes.
+  distance_matrix = [[0
+                      for i in range(int(qtd) - 1)]
+                     for j in range(int(qtd) - 1)
+                     ]  #matriz quadrada de tam igual ao num de nodes.
 
   #TEMPLATE => i = coordenadaX (latitude), j = coordenadasY (longitude)
 
@@ -78,10 +80,10 @@ def compute_distance_matrix(qtd, points):
 
 
 def compute_distance_from_base(qtd, points, base):
-  nb_nodes = int(qtd)
+  nb_nodes = int(qtd) - 1
   distance_from_base = [None] * nb_nodes
 
-  for i in range(nb_nodes - 1):
+  for i in range(nb_nodes):
     try:
       dist = haversineCalculation(base, points[i])
       distance_from_base[i] = dist
@@ -96,24 +98,24 @@ def compute_distance_from_base(qtd, points, base):
 
 
 def compute_communication_net(qtd, radius, points):
-  net_matrix = [[] for i in range(int(qtd)-1)
+  net_matrix = [[] for i in range(int(qtd) - 1)
                 ]  #lista que guarda comunicacao dos nodes pra cada node.
 
   #nodesRelacionados = []
   for i in range(int(qtd) - 1):
-    id = i+1
+    id = i + 1
     #nodesRelacionados.clear()
     for j in range(int(qtd) - 1):
-      id2 = j+1
+      id2 = j + 1
       if i == j: continue
       try:
         dist = haversineCalculation(points[i], points[j])
         if dist < int(radius) * 2:
           #nodesRelacionados.append(j+1)
-          net_matrix[i].append(j + 1)
+          net_matrix[i].append(j)
       except:
         print('Nao conseguiu calcular a distancia entre: ', id, ' e ', id2)
     print('Nó', id, 'se comunica com:', net_matrix[i])
-  
+
   print(net_matrix)
   return net_matrix

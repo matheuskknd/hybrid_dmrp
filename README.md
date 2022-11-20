@@ -61,5 +61,5 @@ python -m hybrid_dmrp instances/instancia1Tijuca_0.6.csv
 To update the dependencies just insert the new dependencies into ```requirements.in``` and run (in the virtual environment):
 
 ```bash
-python -m piptools compile --quiet --output-file=requirements.txt requirements.in
+python -m piptools compile --quiet --resolver=backtracking --output-file=requirements.txt requirements.in
 ```

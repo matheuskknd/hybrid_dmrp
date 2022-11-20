@@ -5,46 +5,77 @@ from brkga_mp_ipr.algorithm import BrkgaMpIpr
 from brkga_mp_ipr.types import (BrkgaParams, BaseChromosome)
 from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
+from .ConstructiveHeurisitc import generateInitialPopulation
+from .VehicleRouting import getMininumVehicleRouting
 from typing import NamedTuple
 
 
 class Item(NamedTuple):
   index: int
+  """Vertex index or (ID - 1). Belongs to [0,N-1]."""
+
   gene: float
+  """Corresponding gene value. Belogs to [0,1]."""
 
 
 class BRKGADecoder:
 
-  def __init__(self, reachMatrix: list[list[int]]) -> None:
+  def __init__(self, allDistances: list[list[float]], baseDistance: list[float],
+               communicationMatrix: list[list[int]], *,
+               vrpSolverTimeLimit: float) -> None:
 
-    self._reachMatrix: list[list[int]] = reachMatrix
+    self._allDistances: list[list[float]] = allDistances
+    """Square matrix with all distance between vertices."""
+
+    self._baseDistance: list[float] = baseDistance
+    """Array of distances from the base for each vertex."""
+
+    self._communicationMatrix: list[list[int]] = communicationMatrix
     """Sparse matrix containing the reach graph."""
 
-    self.N: int = len(reachMatrix)
-    """Number of vertex."""
+    self._vrpSolverTimeLimit: float = vrpSolverTimeLimit
+    """Time limit to spend running the VRP solver at each decoding operation."""
 
-  def chromosome2Set(self, chromosome: BaseChromosome) -> set[int]:
+    self.N: int = len(communicationMatrix)
+    """Number of vertices."""
+
+  def chromosome2Set(self, chromosome: BaseChromosome,
+                     rewrite: bool = False) -> set[int]:
 
     # Auxliar list for sorting by gene value
     sortedByGeneList: list[Item] = [
       Item(i, chromosome[i]) for i in range(self.N)
-    ]    
+    ]
     sortedByGeneList.sort(key=lambda t: t.gene, reverse=True)
 
     # Auxliar list for recording visited nodes
     visitedList: list[bool] = self.N * [False]
-    
+
     # Set of nodes to visit
     selectedNodeSet: set[int] = set()
-    
-    for i in sortedByGeneList:
-      if not visitedList[i.index]:
-        selectedNodeSet.add(i.index +1)
 
-        # Mark i and its neighboors as visited
-        visitedList[i.index -1] = True
-        for j in self._reachMatrix[i.index]:
-          visitedList[j-1] = True
+    if rewrite ==False:
+      for i in sortedByGeneList:
+        if not visitedList[i.index]:
+          selectedNodeSet.add(i.index)
+
+          # Mark i and its neighboors as visited
+          visitedList[i.index] = True
+          for j in self._communicationMatrix[i.index]:
+            visitedList[j] = True
+
+    else:
+      for i in sortedByGeneList:
+        if not visitedList[i.index]:
+          selectedNodeSet.add(i.index)
+
+          # Mark i and its neighboors as visited and rewrite the chromosome
+          visitedList[i.index] = True
+          chromosome[i.index] = 1
+
+          for j in self._communicationMatrix[i.index]:
+            visitedList[j] = True
+            chromosome[j] = 0
 
     return selectedNodeSet
 
@@ -52,16 +83,25 @@ class BRKGADecoder:
              rewrite: bool = False) -> float:
     """Decoder interface method."""
 
-    return len(self.chromosome2Set(chromosome))
+    return getMininumVehicleRouting(
+      allDistances=self._allDistances,
+      baseDistance=self._baseDistance,
+      minimumDominatingSet=self.chromosome2Set(chromosome, rewrite),
+      timeLimit=self._vrpSolverTimeLimit,
+    )
 
 
-def getMinimumDominatingSet(communicationMatrix: list[list[int]], *, seed: int,
-                            num_generations: int, population_size: int,
-                            elite_percentage: float, mutants_percentage: float,
-                            total_parents: int,
-                            num_elite_parents: int) -> set[int]:
+def solveHybriDMRP(allDistances: list[list[float]], baseDistance: list[float],
+                   communicationMatrix: list[list[int]], *, seed: int,
+                   num_generations: int, population_size: int,
+                   elite_percentage: float, mutants_percentage: float,
+                   total_parents: int, num_elite_parents: int,
+                   vrpSolverTimeLimit: float = 10, quiet: bool = False) -> float:
+
   # BRKGA decoder
-  decoder: BRKGADecoder = BRKGADecoder(communicationMatrix)
+  decoder: BRKGADecoder = BRKGADecoder(allDistances, baseDistance,
+                                       communicationMatrix,
+                                       vrpSolverTimeLimit=vrpSolverTimeLimit)
 
   # BRKGA Hyper-parameters
   params: BrkgaParams = BrkgaParams()
@@ -86,11 +126,24 @@ def getMinimumDominatingSet(communicationMatrix: list[list[int]], *, seed: int,
                               chromosome_size=len(communicationMatrix),
                               params=params)
 
+  # Use a semi-greedy heuristic to create an initial population
+  ga.set_initial_population(
+    generateInitialPopulation(allDistances, baseDistance, communicationMatrix,
+                              seed=seed, population_size=population_size,
+                              chromosome_size=len(allDistances)))
+
   # Run the BRKGA
   ga.initialize()
   ga.evolve(num_generations=num_generations)
-  bestSoFar: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
 
-  # Debug - print the best MDS solution ever found
-  print("Minimum dominating set: ", bestSoFar)
-  return bestSoFar
+  # Debug - print the best MDS and VRP respective solution ever found
+  if quiet ==False:
+    mdsSolution: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
+    print("MDS Solution: ", mdsSolution, "\n")
+
+    return getMininumVehicleRouting(allDistances=allDistances,
+                                    baseDistance=baseDistance,
+                                    minimumDominatingSet=mdsSolution,
+                                    timeLimit=vrpSolverTimeLimit, quiet=False)
+
+  return ga.get_best_fitness()
