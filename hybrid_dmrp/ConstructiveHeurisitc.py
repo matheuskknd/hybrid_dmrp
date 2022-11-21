@@ -95,6 +95,8 @@ def generateInitialPopulation(allDistances: list[list[float]],
     chromosome: BaseChromosome = BaseChromosome(None
                                                 for _ in range(chromosome_size))
 
+    removedSet: set[int] = set()
+
     while len(_rclBaseList) != 0:
       maxEC: float = -INFINITY
       minEC: float = INFINITY
@@ -108,35 +110,38 @@ def generateInitialPopulation(allDistances: list[list[float]],
       chosenItem: Optional[RclItem] = None
 
       item: Optional[dllistnode] = _rclBaseList.nodeat(0)
-      while item != None:
+      while True:
         if item.value.nodeEC > minAllowedEC or abs(item.value.nodeEC - minAllowedEC) < 0.000_001:
           chosenItem = _rclBaseList.remove(item)
           chromosome[chosenItem.index] = 1
+          removedSet.add(chosenItem.index)
           break
 
-        item = item.next()
+        item = item.next
 
       assert isinstance(chosenItem, RclItem)
 
       # Remove all neighbors, so they won't enter the RCL in the future
       neighbors: frozenset[int] = _communicationMatrix[chosenItem.index]
-      if len(neighbors) == 0:
+      neighborsToRemove: int = len(neighbors.difference(removedSet))
+      if neighborsToRemove == 0:
         continue
 
       item = _rclBaseList.nodeat(0)
       removed: int = 0
 
-      while removed != len(neighbors):
+      while removed != neighborsToRemove:
         if cast(RclItem, item.value).index in neighbors:
           itemToRemove: dllistnode = item
-          item = item.next()
+          item = item.next
 
           neighbor: RclItem = _rclBaseList.remove(itemToRemove)
           chromosome[neighbor.index] = 0
+          removedSet.add(neighbor.index)
           removed += 1
 
         else:
-          item = item.next()
+          item = item.next
 
     # Debug only
     for i in chromosome:
