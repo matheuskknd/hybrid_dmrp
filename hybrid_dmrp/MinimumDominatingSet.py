@@ -20,9 +20,12 @@ class Item(NamedTuple):
 
 class BRKGADecoder:
 
-  def __init__(self, allDistances: list[list[float]], baseDistance: list[float],
-               communicationMatrix: list[list[int]], *,
-               vrpSolverTimeLimit: float) -> None:
+  def __init__(self, seed: int, allDistances: list[list[float]],
+               baseDistance: list[float], communicationMatrix: list[list[int]],
+               *, vrpSolverTimeLimit: float) -> None:
+
+    self._seed: int = seed
+    """Pseudo-random number generator seed."""
 
     self._allDistances: list[list[float]] = allDistances
     """Square matrix with all distance between vertices."""
@@ -84,6 +87,7 @@ class BRKGADecoder:
     """Decoder interface method."""
 
     return getMininumVehicleRouting(
+      seed=self._seed,
       allDistances=self._allDistances,
       baseDistance=self._baseDistance,
       minimumDominatingSet=self.chromosome2Set(chromosome, rewrite),
@@ -96,10 +100,10 @@ def solveHybriDMRP(allDistances: list[list[float]], baseDistance: list[float],
                    num_generations: int, population_size: int,
                    elite_percentage: float, mutants_percentage: float,
                    total_parents: int, num_elite_parents: int,
-                   vrpSolverTimeLimit: float = 10, quiet: bool = False) -> float:
+                   vrpSolverTimeLimit: float = 5, quiet: bool = False) -> float:
 
   # BRKGA decoder
-  decoder: BRKGADecoder = BRKGADecoder(allDistances, baseDistance,
+  decoder: BRKGADecoder = BRKGADecoder(seed, allDistances, baseDistance,
                                        communicationMatrix,
                                        vrpSolverTimeLimit=vrpSolverTimeLimit)
 
@@ -141,7 +145,7 @@ def solveHybriDMRP(allDistances: list[list[float]], baseDistance: list[float],
     mdsSolution: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
     print("MDS Solution: ", mdsSolution, "\n")
 
-    return getMininumVehicleRouting(allDistances=allDistances,
+    return getMininumVehicleRouting(seed=seed, allDistances=allDistances,
                                     baseDistance=baseDistance,
                                     minimumDominatingSet=mdsSolution,
                                     timeLimit=vrpSolverTimeLimit, quiet=False)
