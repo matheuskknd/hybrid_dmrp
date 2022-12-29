@@ -23,13 +23,13 @@ def generateRclBase(allDistances: list[list[float]],
   """
   Generates a set from which the initial candidate lists will be generated from.
 
-  The set is composed by the original vertex index (or ID - 1) and it's respective cost,
+  The set is composed by the original vertex index (or ID - 1) and its respective cost,
   calculated used the Eigenvector Centrality algorithm.
   """
 
   # Convert sparse matrix into a networkx.Graph object
   edges: list[tuple[int, int, dict[str, float]]] = []
-  graph: Graph = Graph(edges)
+  loneNodeList: dllist = dllist()
 
   for i in range(len(communicationMatrix)):
     edges.extend((
@@ -41,11 +41,12 @@ def generateRclBase(allDistances: list[list[float]],
     ) for j in communicationMatrix[i] if j > i)
 
     if len(communicationMatrix[i]) == 0:
-      graph.add_node(i)
+      loneNodeList.append(i)
 
   # Calculate the eigenvector centrality for each node
   # https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.centrality.eigenvector_centrality.html
-  graph = Graph(edges)
+  graph: Graph = Graph(edges)
+  graph.add_nodes_from(loneNodeList)
 
   ecDict: dict[int, float] = eigenvector_centrality(
     graph,
@@ -86,10 +87,11 @@ def generateInitialPopulation(allDistances: list[list[float]],
 
   def createChromosome() -> BaseChromosome:
     # Shuffle the RCL base list
-    candidateList = rclBaseList.copy()
+    candidateList: list[RclItem] = rclBaseList.copy()
     random.shuffle(candidateList)
 
     _rclBaseList: dllist = dllist(candidateList)
+    del candidateList
 
     # Generate a new chromosome
     chromosome: BaseChromosome = BaseChromosome(None
@@ -109,15 +111,15 @@ def generateInitialPopulation(allDistances: list[list[float]],
       minAllowedEC: float = minEC + alpha * (maxEC-minEC)
       chosenItem: Optional[RclItem] = None
 
-      item: Optional[dllistnode] = _rclBaseList.nodeat(0)
+      node: dllistnode = _rclBaseList.nodeat(0)
       while True:
-        if item.value.nodeEC > minAllowedEC or abs(item.value.nodeEC - minAllowedEC) < 0.000_001:
-          chosenItem = _rclBaseList.remove(item)
+        if cast(RclItem, node.value).nodeEC > minAllowedEC - 0.000_001:
+          chosenItem: RclItem = _rclBaseList.remove(node)
           chromosome[chosenItem.index] = 1
           removedSet.add(chosenItem.index)
           break
 
-        item = item.next
+        node = node.next
 
       assert isinstance(chosenItem, RclItem)
 
@@ -127,21 +129,21 @@ def generateInitialPopulation(allDistances: list[list[float]],
       if neighborsToRemove == 0:
         continue
 
-      item = _rclBaseList.nodeat(0)
+      node = _rclBaseList.nodeat(0)
       removed: int = 0
 
       while removed != neighborsToRemove:
-        if cast(RclItem, item.value).index in neighbors:
-          itemToRemove: dllistnode = item
-          item = item.next
+        if cast(RclItem, node.value).index in neighbors:
+          nodeToRemove: dllistnode = node
+          node = node.next
 
-          neighbor: RclItem = _rclBaseList.remove(itemToRemove)
+          neighbor: RclItem = _rclBaseList.remove(nodeToRemove)
           chromosome[neighbor.index] = 0
           removedSet.add(neighbor.index)
           removed += 1
 
         else:
-          item = item.next
+          node = node.next
 
     # Debug only
     for i in chromosome:
@@ -150,4 +152,4 @@ def generateInitialPopulation(allDistances: list[list[float]],
     return chromosome
 
   # Generate the chromosomes
-  return [createChromosome()] * population_size
+  return [createChromosome() for _ in range(population_size)]
