@@ -5,10 +5,10 @@
 
 # Empty lines and comments are ignored.
 
-instancia1PedraBranca.csv
-instancia1PedraBranca_0.6.csv
-instancia1PedraBranca_0.7.csv
-instancia1PedraBranca_0.9.csv
+#instancia1PedraBranca.csv
+#instancia1PedraBranca_0.6.csv
+#instancia1PedraBranca_0.7.csv
+#instancia1PedraBranca_0.9.csv
 instancia1Tijuca.csv
 instancia1Tijuca_0.6.csv
 instancia1Tijuca_0.7.csv
@@ -25,11 +25,11 @@ instancia4Tijuca.csv
 instancia4Tijuca_0.6.csv
 instancia4Tijuca_0.7.csv
 instancia4Tijuca_0.9.csv
-instancia_10.csv
-instancia_20.csv
-instancia_20_100.csv
-instancia_20_50.csv
-instancia_20_50_bkp.csv
-instancia_30_225.csv
-instancia_40_400.csv
-instancia_5.csv
+#instancia_10.csv
+#instancia_20.csv
+#instancia_20_100.csv
+#instancia_20_50.csv
+#instancia_20_50_bkp.csv
+#instancia_30_225.csv
+#instancia_40_400.csv
+#instancia_5.csv
