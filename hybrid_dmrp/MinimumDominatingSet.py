@@ -6,8 +6,10 @@ from brkga_mp_ipr.types import (BrkgaParams, BaseChromosome)
 from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
 from .ConstructiveHeurisitc import generateInitialPopulation
-from .VehicleRouting import getMininumVehicleRouting
-from typing import NamedTuple
+from .VehicleRouting import (VRPSolution, getMininumVehicleRouting)
+from typing import (Any, NamedTuple, Optional)
+
+INFINITY: float = float("inf")
 
 
 class Item(NamedTuple):
@@ -86,7 +88,7 @@ class BRKGADecoder:
              rewrite: bool = False) -> float:
     """Decoder interface method."""
 
-    return getMininumVehicleRouting(
+    vrpSolution: VRPSolution = getMininumVehicleRouting(
       seed=self._seed,
       allDistances=self._allDistances,
       baseDistance=self._baseDistance,
@@ -94,13 +96,34 @@ class BRKGADecoder:
       timeLimit=self._vrpSolverTimeLimit,
     )
 
+    return vrpSolution.cost
 
-def solveHybriDMRP(allDistances: list[list[float]], baseDistance: list[float],
-                   communicationMatrix: list[list[int]], *, seed: int,
-                   num_generations: int, population_size: int,
-                   elite_percentage: float, mutants_percentage: float,
-                   total_parents: int, num_elite_parents: int,
-                   vrpSolverTimeLimit: float = 5, quiet: bool = False) -> float:
+
+class HybridBrkgaSolution(VRPSolution):
+  """Class the holds the Hybrid BRKGA subproblem result."""
+
+  def __init__(self, cost: float, *,
+               minimumDominatingSet: Optional[set[int]] = None,
+               evolutionPerGen: Optional[list[float]] = None,
+               **kwargs: dict[str, Any]) -> None:
+
+    # Build the parent object
+    super().__init__(cost, **kwargs)
+
+    self.minimumDominatingSet: Optional[set[int]] = minimumDominatingSet
+    """The minimum dominating set corresponding to the solution with the best fitness ever found."""
+
+    self.evolutionPerGen: Optional[list[float]] = evolutionPerGen
+    """The best fitness in the population for each generation evolved."""
+
+
+def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
+                     communicationMatrix: list[list[int]], *, seed: int,
+                     num_generations: int, population_size: int,
+                     elite_percentage: float, mutants_percentage: float,
+                     total_parents: int, num_elite_parents: int,
+                     vrpSolverTimeLimit: float = 5,
+                     quiet: bool = False) -> HybridBrkgaSolution:
 
   # BRKGA decoder
   decoder: BRKGADecoder = BRKGADecoder(seed, allDistances, baseDistance,
@@ -137,17 +160,51 @@ def solveHybriDMRP(allDistances: list[list[float]], baseDistance: list[float],
                               chromosome_size=len(allDistances)))
 
   # Run the BRKGA
+  evolutionPerGen: list[float] = [INFINITY] * (num_generations+1)
   ga.initialize()
-  ga.evolve(num_generations=num_generations)
 
-  # Debug - print the best MDS and VRP respective solution ever found
+  evolutionPerGen[0] = ga.get_best_fitness()
+  bestFitnessSoFar: float = evolutionPerGen[0]
+  bestFitnessCount: int = 1
+
+  for i in range(1, num_generations + 1):
+    ga.evolve(num_generations=1)
+    evolutionPerGen[i] = ga.get_best_fitness()
+
+    # Debug only
+    if quiet ==False:
+      if i == 1:
+        print(f"Semi-greedy best solution: {evolutionPerGen[0]}.")
+      elif i % 50 == 0:
+        print(f"Generation {i} best fitness: {evolutionPerGen[i]}.")
+
+    if evolutionPerGen[i] < bestFitnessSoFar:
+      bestFitnessSoFar = evolutionPerGen[i]
+      bestFitnessCount = 1
+
+    else:
+      bestFitnessCount += 1
+      assert id(evolutionPerGen[i]) == id(bestFitnessSoFar)
+
+      # Maximum number of generations without any improvement
+      if bestFitnessCount == 100:
+        print(f"Generation {i}. Stopping due to stagnation since generation {i-100}.")
+        break
+
+  # Debug and evaluation
   if quiet ==False:
     mdsSolution: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
-    print("MDS Solution: ", mdsSolution, "\n")
+    print(f"MDS Solution: {sorted(mdsSolution)}\n")
 
-    return getMininumVehicleRouting(seed=seed, allDistances=allDistances,
-                                    baseDistance=baseDistance,
-                                    minimumDominatingSet=mdsSolution,
-                                    timeLimit=vrpSolverTimeLimit, quiet=False)
+    vrpSolution: VRPSolution = getMininumVehicleRouting(
+      seed=seed, allDistances=allDistances, baseDistance=baseDistance,
+      minimumDominatingSet=mdsSolution, timeLimit=vrpSolverTimeLimit,
+      quiet=False)
 
-  return ga.get_best_fitness()
+    assert abs(vrpSolution.cost - ga.get_best_fitness()) < 0.000_001, f"{(vrpSolution.cost, ga.get_best_fitness())}"
+
+    return HybridBrkgaSolution(minimumDominatingSet=mdsSolution,
+                               evolutionPerGen=evolutionPerGen,
+                               **vars(vrpSolution))
+
+  return HybridBrkgaSolution(ga.get_best_fitness())

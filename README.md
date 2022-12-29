@@ -2,12 +2,21 @@
 
 First of all, the [Local Solver](https://www.localsolver.com/) must be installed on your local [Windows](https://www.localsolver.com/docs/last/exampletour/vrp.html) or [Linux](https://www.localsolver.com/docs/last/installation/installationonlinux.html) machine. As well as Python3.10 or newer.
 
+Also, IBM's [ILOG CPLEX Optimization Studio](https://www.ibm.com/products/ilog-cplex-optimization-studio) must be installed on your local machine. Once it's installed, the following should be run once:
+
+Bash (Linux/Windows)
+
+```bash
+cd "$(which cplex | sed 's/\/cplex$//')/../../../../../.."
+python3 IBM\ILOG\CPLEX_Studio221\python\setup.py install --user # Or as SUDO
+```
+
 Execute the following to enter a virtual environment depending on your terminal interpreter:
 
 Bash (Linux)
 
 ```bash
-python3 -m venv .venv
+python3 -m venv --clear .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -17,7 +26,7 @@ python -m pip install localsolver -i "https://pip.localsolver.com"
 Bash (Windows)
 
 ```bash
-python3 -m venv .venv
+python3 -m venv --clear .venv
 source .venv/Scripts/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -27,7 +36,7 @@ python -m pip install localsolver -i "https://pip.localsolver.com"
 CMD
 
 ```bash
-python3 -m venv .venv
+python3 -m venv --clear .venv
 .venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -37,7 +46,7 @@ python -m pip install localsolver -i "https://pip.localsolver.com"
 Power Shell
 
 ```powershell
-python3 -m venv .venv
+python3 -m venv --clear .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt

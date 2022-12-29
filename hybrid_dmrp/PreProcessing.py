@@ -24,7 +24,7 @@ def read_input(instance: TextIO):
   print()
   next(file_it)
 
-  coordenates = [None] * nb_nodes  # List of tuples
+  coordenates = [None] * (nb_nodes-1)  # List of tuples
   for i in range(nb_nodes - 1):
     x_coordenates = next(file_it)
     y_coordenates = next(file_it)
@@ -42,7 +42,13 @@ def read_input(instance: TextIO):
                                                 str_communicationRadius,
                                                 coordenates)  #Lista de elementos dentro do raio de comunicação
 
-  return (distance_matrix, distance_from_base, communication_net)
+  return (
+    distance_matrix,
+    distance_from_base,
+    communication_net,
+    base,
+    coordenates,
+  )
 
 
 def haversineCalculation(point1, point2):

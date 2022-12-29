@@ -1,10 +1,16 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
-from localsolver import (LocalSolver, LSModel, LSExpression, LSSolutionStatus)
+from localsolver import (
+  LocalSolver,
+  LSModel,
+  LSExpression,
+  LSSolutionStatus,
+  LSParam,
+)
+
 from typing import (Iterator, Optional, cast)
 from networkx import MultiDiGraph
-import networkx
 
 # References
 # https://www.localsolver.com/docs/last/exampletour/vrp.html
@@ -13,10 +19,38 @@ import networkx
 INFINITY: float = float("inf")
 
 
+class VRPSolution:
+  """Class the holds the VRP-LA subproblem result."""
+
+  def _adjustCost(cost: float, status: LSSolutionStatus) -> float:
+    return (cost if status == LSSolutionStatus.FEASIBLE or
+            status == LSSolutionStatus.OPTIMAL else INFINITY)
+
+  def __init__(self, cost: float,
+               status: LSSolutionStatus = LSSolutionStatus.FEASIBLE,
+               autonomy: float = 0.0, *,
+               pathList: list[MultiDiGraph] = []) -> None:
+
+    self.cost: float = VRPSolution._adjustCost(cost, status)
+    """The solution total cost."""
+
+    self.status: LSSolutionStatus = status
+    """The solver returned status for this solution."""
+
+    self.autonomy: float = autonomy
+    """The vehicle autonomy."""
+
+    self.pathList: list[MultiDiGraph] = pathList
+    """A list of graphs (paths) the vehicles must traves in this solution."""
+
+
 def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
                              baseDistance: list[float],
                              minimumDominatingSet: set[int], timeLimit: float,
-                             quiet: bool = True) -> float:
+                             quiet: bool = True) -> VRPSolution:
+  # The same as the dominating set, but ordered
+  sortedDominatingSet: list[int] = sorted(minimumDominatingSet)
+
   # Total number of vertices (costumers or antennas) to visit (all in the MDS)
   nodeNumber: int = len(minimumDominatingSet)
 
@@ -30,37 +64,30 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
     # Declares the optimization model
     model: LSModel = localSolver.model
 
-    # Set the local solver random seed
-    localSolver.get_param().set_seed(seed)
+    # Create a constant expression to be the autonomy
+    autonomyConst: LSExpression = model.create_constant(autonomy)
 
     # Create LocalSolver arrays to be able to access them with an "at" operator
-    distanceMatrix = model.array()
-    for i in range(len(allDistances)):
-      if i in minimumDominatingSet:
-        distanceMatrix.add_operand(
-          model.array(allDistances[i][j]
-                      for j in range(len(allDistances))
-                      if j in minimumDominatingSet))
+    distanceMatrix = model.array(
+      model.array(allDistances[i][j]
+                  for j in sortedDominatingSet)
+      for i in sortedDominatingSet)
 
     # The distance for each customer from the base
-    baseDistanceArray: LSExpression = model.array(
-      baseDistance[i]
-      for i in range(len(baseDistance))
-      if i in minimumDominatingSet)
+    baseDistanceArray: LSExpression = model.array(baseDistance[i]
+                                                  for i in sortedDominatingSet)
 
     # The sequence of customers visited by each vehicle
     nodeSequence: list[LSExpression] = [
       model.list(nodeNumber) for _ in range(vehicleNumber)
     ]
 
-    # Debug only
-    if not quiet:
+    # A vehicle is used if it visits at least one customer
+    # if not quiet:
+    #   vehiclesUsed: list[LSExpression] = [(model.count(nodeSequence[k]) > 0)
+    #                                     for k in range(vehicleNumber)]
 
-      # A vehicle is used if it visits at least one customer
-      vehiclesUsed: list[LSExpression] = [(model.count(nodeSequence[k]) > 0)
-                                          for k in range(vehicleNumber)]
-
-      vehiclesUsedNumber: LSExpression = model.sum(vehiclesUsed)
+    #   vehiclesUsedNumber: LSExpression = model.sum(vehiclesUsed)
 
     # No client must be visited more than once by a single vehicle
     # And all customers must be visited by some vehicle
@@ -89,7 +116,7 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
       ))
 
       # The autonomy constraint is the same for all vehicles
-      model.constraint(routeDistanceList[k] <= autonomy)
+      model.constraint(routeDistanceList[k] <= autonomyConst)
 
       del distanceSelectorLambda
       del costumerCount
@@ -102,23 +129,37 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
     # Objective: minimize the distance traveled
     # model.minimize(vehiclesUsedNumber) # It's not necessary to minimize the number of refills/vehicles
     model.minimize(totalDistance)
-    model.close()
 
     # Parameterizes the solver
-    localSolver.get_param().set_time_limit(timeLimit)
-    localSolver.get_param().set_iteration_limit(8000)
-    localSolver.get_param().set_verbosity(0 if quiet else 2)
+    lsParam: LSParam = localSolver.get_param()
+    lsParam.set_iteration_between_ticks(300_000)
+    lsParam.set_time_between_displays(300_000)
+    lsParam.set_time_between_ticks(300_000)
+    lsParam.set_nb_threads(0)
+
+    if quiet:
+      lsParam.set_log_writer(None)
+      lsParam.set_verbosity(0)
+    else:
+      lsParam.set_verbosity(2)
+
+    # Set the local solver random seed + iteration_limit to make it deterministic
+    #lsParam.set_time_limit(timeLimit) # Non deterministic
+    lsParam.set_iteration_limit(8000)
+    lsParam.set_seed(seed)
 
     # Effectivelly executes the solver
+    model.close()
     localSolver.solve()
 
     # Get the execution result
     vrpStatus: LSSolutionStatus = localSolver.get_solution().get_status()
-    vrpSolution: float = localSolver.get_solution().get_value(totalDistance)
+    vrpCost: float = localSolver.get_solution().get_value(totalDistance)
+    pathList: list[MultiDiGraph] = []
 
-    # Debug only
+    # Debug and evaluation
     if not quiet:
-      print(f"\nTotal distance travelled: {vrpSolution}")
+      print(f"\nTotal distance travelled: {vrpCost}")
       print("VRP Solution (0 is the base):")
 
       # Recreate the constant variables (accessing them in the model is not allowed by LocalSolver)
@@ -148,7 +189,7 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
       solutionCost: float = 0
 
       for k in range(vehicleNumber):
-        if not cast(bool, vehiclesUsed[k].get_value()):
+        if len(nodeSequence[k].get_value()) == 0:
           continue
 
         path: MultiDiGraph = MultiDiGraph()
@@ -175,15 +216,16 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
         )
 
         pathCost += distance
-        assert abs(routeDistanceList[k].get_value() - pathCost) < 0.000_001
+        rDk: float = routeDistanceList[k].get_value()
+        assert abs(rDk - pathCost) < 0.000_001, f"{(rDk, pathCost)}"
 
         print(f"\nThe {k+1}-th vehicle/refill path is used costing {pathCost}!")
-        print(f"MultiDiGraph: {networkx.to_edgelist(path)}")
+        print(f"MultiDiGraph: {[e for e in path.edges(data=True)]}")
 
         solutionCost += pathCost
+        pathList.append(path)
 
-      assert abs(vrpSolution - solutionCost) < 0.000_001
-      assert totalDistance.get_value() == vrpSolution
+      assert abs(vrpCost - solutionCost) < 0.000_001, f"{(vrpCost, solutionCost)}"
+      assert totalDistance.get_value() == vrpCost
 
-    return (vrpSolution if vrpStatus == LSSolutionStatus.FEASIBLE or
-            vrpStatus == LSSolutionStatus.OPTIMAL else INFINITY)
+    return VRPSolution(vrpCost, vrpStatus, autonomy, pathList=pathList)
