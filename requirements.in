@@ -5,7 +5,7 @@ haversine
 networkx
 pyllist
 docplex
-cplex
 matplotlib
 git+https://github.com/Phlya/adjustText@cb8b09d1e2663e75ac8755ed56f95f09ecf353ab#egg=adjustText
 pandas
+scipy

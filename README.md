@@ -2,13 +2,21 @@
 
 First of all, the [Local Solver](https://www.localsolver.com/) must be installed on your local [Windows](https://www.localsolver.com/docs/last/exampletour/vrp.html) or [Linux](https://www.localsolver.com/docs/last/installation/installationonlinux.html) machine. As well as Python3.10 or newer.
 
-Also, IBM's [ILOG CPLEX Optimization Studio](https://www.ibm.com/products/ilog-cplex-optimization-studio) must be installed on your local machine. Once it's installed, the following should be run once:
+Also, IBM's [ILOG CPLEX Optimization Studio](https://www.ibm.com/products/ilog-cplex-optimization-studio) must be installed on your local machine and must be avaialable through the PATH. Once it's installed, the following should be run once:
 
-Bash (Linux/Windows)
+Bash (Linux)
 
 ```bash
 cd "$(which cplex | sed 's/\/cplex$//')/../../../../../.."
-python3 IBM\ILOG\CPLEX_Studio221\python\setup.py install --user # Or as SUDO
+python3 IBM/ILOG/CPLEX_Studio221/python/setup.py install --user # Or as sudo
+```
+
+CMD (Admin)
+
+```bash
+where cplex | sed 's/\\\\cplex.exe$//' | sed 's/\//\\\\/g'
+cd "<last_output>\..\..\..\..\..\.."
+python3 IBM\ILOG\CPLEX_Studio221\python\setup.py install --user
 ```
 
 Execute the following to enter a virtual environment depending on your terminal interpreter:
@@ -64,6 +72,16 @@ Execute the main code:
 ```bash
 python -m hybrid_dmrp instances/instancia1Tijuca_0.6.csv
 ```
+
+### Testing
+
+To run test suites use:
+
+```bash
+python -m tests [[test_suite_name] ...]
+```
+
+If no other parameter is passed except the script name, all test suites are run. The parameters specify which test suites should run.
 
 ### Dependencies
 

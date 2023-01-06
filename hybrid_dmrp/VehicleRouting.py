@@ -11,6 +11,7 @@ from localsolver import (
 
 from typing import (Iterator, Optional, cast)
 from networkx import MultiDiGraph
+import networkx
 
 # References
 # https://www.localsolver.com/docs/last/exampletour/vrp.html
@@ -26,28 +27,30 @@ class VRPSolution:
     return (cost if status == LSSolutionStatus.FEASIBLE or
             status == LSSolutionStatus.OPTIMAL else INFINITY)
 
-  def __init__(self, cost: float,
-               status: LSSolutionStatus = LSSolutionStatus.FEASIBLE,
+  def __init__(self, vrpCost: float,
+               vrpStatus: LSSolutionStatus = LSSolutionStatus.INFEASIBLE,
                autonomy: float = 0.0, *,
-               pathList: list[MultiDiGraph] = []) -> None:
+               vrpGraph: MultiDiGraph = MultiDiGraph()) -> None:
 
-    self.cost: float = VRPSolution._adjustCost(cost, status)
-    """The solution total cost."""
+    self.vrpCost: float = VRPSolution._adjustCost(vrpCost, vrpStatus)
+    """The VRP solution total cost."""
 
-    self.status: LSSolutionStatus = status
-    """The solver returned status for this solution."""
+    self.vrpStatus: LSSolutionStatus = vrpStatus
+    """The solver returned status for the VRP solution."""
 
     self.autonomy: float = autonomy
     """The vehicle autonomy."""
 
-    self.pathList: list[MultiDiGraph] = pathList
-    """A list of graphs (paths) the vehicles must traves in this solution."""
+    self.vrpGraph: MultiDiGraph = vrpGraph
+    """A graph (paths) the vehicles must travel in this solution."""
 
 
 def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
                              baseDistance: list[float],
                              minimumDominatingSet: set[int], timeLimit: float,
+                             bestVrpCost: float = INFINITY,
                              quiet: bool = True) -> VRPSolution:
+
   # The same as the dominating set, but ordered
   sortedDominatingSet: list[int] = sorted(minimumDominatingSet)
 
@@ -155,12 +158,14 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
     # Get the execution result
     vrpStatus: LSSolutionStatus = localSolver.get_solution().get_status()
     vrpCost: float = localSolver.get_solution().get_value(totalDistance)
-    pathList: list[MultiDiGraph] = []
+    graph: MultiDiGraph = MultiDiGraph()
 
-    # Debug and evaluation
-    if not quiet:
-      print(f"\nTotal distance travelled: {vrpCost}")
-      print("VRP Solution (0 is the base):")
+    # Debug or evaluation
+    if not quiet or vrpCost < bestVrpCost:
+
+      if not quiet:
+        print(f"\nTotal distance travelled: {vrpCost}")
+        print("VRP Solution (0 is the base):")
 
       # Recreate the constant variables (accessing them in the model is not allowed by LocalSolver)
       _distanceMatrix: list[list[float]] = []
@@ -219,13 +224,14 @@ def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
         rDk: float = routeDistanceList[k].get_value()
         assert abs(rDk - pathCost) < 0.000_001, f"{(rDk, pathCost)}"
 
-        print(f"\nThe {k+1}-th vehicle/refill path is used costing {pathCost}!")
-        print(f"MultiDiGraph: {[e for e in path.edges(data=True)]}")
+        if not quiet:
+          print(f"\nThe {k+1}-th vehicle/refill path is used costing {pathCost}!")
+          print(f"MultiDiGraph: {[e for e in path.edges(data=True)]}")
 
         solutionCost += pathCost
-        pathList.append(path)
+        graph = networkx.compose(graph, path)
 
       assert abs(vrpCost - solutionCost) < 0.000_001, f"{(vrpCost, solutionCost)}"
       assert totalDistance.get_value() == vrpCost
 
-    return VRPSolution(vrpCost, vrpStatus, autonomy, pathList=pathList)
+    return VRPSolution(vrpCost, vrpStatus, autonomy, vrpGraph=graph)

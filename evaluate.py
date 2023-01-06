@@ -3,12 +3,13 @@
 
 from hybrid_dmrp import (HybridDMRPSolution, solveHybridDMRP)
 from os.path import (abspath, basename, dirname, join)
-from localsolver import LSSolutionStatus
 from adjustText import adjust_text
 from networkx import MultiDiGraph
+from localsolver import LSEnum
 from matplotlib import pyplot
 from pandas import DataFrame
 from typing import Any
+from enum import Enum
 import random
 import timeit
 import numpy
@@ -24,7 +25,7 @@ def jsonSerializer(o: Any) -> Any:
     result: dict[str, Any] = vars(o)
     result["minimumDominatingSet"] = sorted(result["minimumDominatingSet"])
     return result
-  elif isinstance(o, LSSolutionStatus):
+  elif isinstance(o, (Enum, LSEnum)):
     return o.name
   else:
     assert False, f"Unexpected type: {type(o)}."
@@ -82,8 +83,8 @@ def evoCurvePlot(solution: HybridDMRPSolution, evoCurveFileName: str) -> None:
   pyplot.cla()
 
 
-def solutionScatterPlot(solution: HybridDMRPSolution,
-                        scatterFileName: str) -> None:
+def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
+                        graph: MultiDiGraph, scatterFileName: str) -> None:
 
   # List of coordinates of all nodes (including the base)
   locX: list[float] = ([solution.base[0]] +
@@ -101,7 +102,7 @@ def solutionScatterPlot(solution: HybridDMRPSolution,
                f"N = {solution.N}"
                f", |MDS|= {len(solution.minimumDominatingSet)}"
                f", autonomy={round(autonomy,2)}"
-               f", totalCost={round(solution.cost,2)}")
+               f", totalCost={round(cost,2)}")
 
   # Draw the nodes location (except the base)
   # Visited nodes are blue
@@ -123,30 +124,28 @@ def solutionScatterPlot(solution: HybridDMRPSolution,
   # Draw all active edges
   textList: list[pyplot.Text] = []
 
-  for path in solution.pathList:
-    edgeSet: frozenset[tuple[int, int]] = frozenset(
-      (u, v) for (u, v) in path.edges(data=False))
+  edgeSet: frozenset[tuple[int, int]] = frozenset(
+    (u, v) for (u, v) in graph.edges(data=False))
 
-    for (u, v, ddict) in path.edges(data=True):
-      assert "cost" in ddict, f"Missing property 'cost' on edge {(u,v)}."
+  for (u, v, ddict) in graph.edges(data=True):
+    assert "cost" in ddict, f"Missing property 'cost' on edge {(u,v)}."
 
-      # Should not draw some edges "twice"
-      if u > v and (v, u) in edgeSet:
-        continue
+    # Should not draw some edges "twice"
+    if u > v and (v, u) in edgeSet:
+      continue
 
-      # Draw the edge
-      pyplot.plot([locX[u], locX[v]], [locY[u], locY[v]], c="#3ac14a",
-                  alpha=0.3)
+    # Draw the edge
+    pyplot.plot([locX[u], locX[v]], [locY[u], locY[v]], c="#3ac14a", alpha=0.3)
 
-      # Should not draw the edge costs on big graphs
-      if solution.N > 50:
-        continue
+    # Should not draw the edge costs on big graphs
+    if solution.N > 50:
+      continue
 
-      textList.append(
-        pyplot.text((locX[u] + locX[v]) / 2, (locY[u] + locY[v]) / 2,
-                    f"$d_{{{u},{v}}}={round(ddict['cost'],1)}$",
-                    fontdict={"size": "x-small"}),
-      )
+    textList.append(
+      pyplot.text((locX[u] + locX[v]) / 2, (locY[u] + locY[v]) / 2,
+                  f"$d_{{{u},{v}}}={round(ddict['cost'],1)}$",
+                  fontdict={"size": "x-small"}),
+    )
 
   # Draw the base node location
   pyplot.plot(locX[0], locY[0], c="#ff0000", marker="s")
@@ -204,11 +203,18 @@ os.mkdir(resultDirName)
 
 # Get the list of instances to run
 instanceDir: str = join(workingDir, "instances")
-instanceFilenamesList: list[str] = glob.glob(
+_instanceFileNameList: list[str] = glob.glob(
   join(instanceDir, "placeholder").replace("placeholder", "") + "*.csv",
 )
 
-instanceFilenamesList = sorted(instanceFilenamesList, reverse=True)
+instanceFileNameList: list[tuple[str, int]] = []
+
+for instance in _instanceFileNameList:
+  with open(instance, "r", encoding="UTF-8") as instanceFile:
+    instanceFileNameList.append((instance, int(instanceFile.readline())))
+
+instanceFileNameList = sorted(instanceFileNameList, key=lambda pair: pair[1])
+del _instanceFileNameList
 del instanceDir
 del workingDir
 
@@ -223,7 +229,7 @@ statisticsDict: dict[str, list[Any]] = {
   "mean_time": [],
 }
 
-for instance in instanceFilenamesList:
+for (instance, _) in instanceFileNameList:
   instanceBaseName: str = basename(instance).removesuffix(".csv")
   instanceResultDir: str = join(resultDirName, instanceBaseName)
   os.mkdir(instanceResultDir)
@@ -239,7 +245,8 @@ for instance in instanceFilenamesList:
   for run in range(NB_SAMPLES):
     evoCurveFileName: str = join(instanceResultDir, f"evo_curve_{run}.png")
     solutionFileName: str = join(instanceResultDir, f"solution_{run}.json")
-    scatterFileName: str = join(instanceResultDir, f"scatter_{run}.png")
+    vrpScatterFileName: str = join(instanceResultDir, f"vrp_scatter_{run}.png")
+    babScatterFileName: str = join(instanceResultDir, f"bab_scatter_{run}.png")
 
     with open(instance, "r", encoding="UTF-8") as instanceFile:
       hybridDMRPSolution: HybridDMRPSolution = solveHybridDMRP(
@@ -258,11 +265,23 @@ for instance in instanceFilenamesList:
     evoCurvePlot(hybridDMRPSolution, evoCurveFileName)
 
     # Save the best solution as a scatter plot
-    solutionScatterPlot(hybridDMRPSolution, scatterFileName)
+    solutionScatterPlot(
+      hybridDMRPSolution,
+      hybridDMRPSolution.vrpCost,
+      hybridDMRPSolution.vrpGraph,
+      vrpScatterFileName,
+    )
+
+    solutionScatterPlot(
+      hybridDMRPSolution,
+      hybridDMRPSolution.babCost,
+      hybridDMRPSolution.babGraph,
+      babScatterFileName,
+    )
 
     # Save the result for statistics
     timeSamples[run] = hybridDMRPSolution.elapsedSeconds
-    costSamples[run] = hybridDMRPSolution.cost
+    costSamples[run] = hybridDMRPSolution.vrpCost
 
     # Save the result object (serialized)
     with open(solutionFileName, "w", encoding="UTF-8") as solutionFile:

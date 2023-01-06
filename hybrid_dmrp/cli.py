@@ -30,9 +30,9 @@ def main() -> None:
 
     # Parameter parsedArgs.num_generations
     _ = argParser.add_argument(
-      "--num-generations", type=int, default=100, dest="num_generations",
+      "--num-generations", type=int, default=10, dest="num_generations",
       metavar="num_generations",
-      help="Number of generations for the BRKGA to evolve. Default 100.")
+      help="Number of generations for the BRKGA to evolve. Default 10.")
 
     # Parameter parsedArgs.population_size
     _ = argParser.add_argument(
@@ -81,10 +81,11 @@ def main() -> None:
       mutants_percentage=parsedArgs.mutants_percentage,
       total_parents=parsedArgs.total_parents,
       num_elite_parents=parsedArgs.num_elite_parents,
+      isCLI=True,
     )
 
     # Required for IRace - IT MUST BE THE LAST THING PRINTED
-    print(f"{solution.cost:.2f} {solution.elapsedSeconds:.2f}")
+    print(f"{solution.babCost:.2f} {solution.elapsedSeconds:.2f}")
 
   except BaseException as e:
     raise e

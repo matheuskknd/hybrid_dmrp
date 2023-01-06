@@ -7,7 +7,7 @@ from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
 from .ConstructiveHeurisitc import generateInitialPopulation
 from .VehicleRouting import (VRPSolution, getMininumVehicleRouting)
-from typing import (Any, NamedTuple, Optional)
+from typing import (Any, NamedTuple)
 
 INFINITY: float = float("inf")
 
@@ -43,6 +43,12 @@ class BRKGADecoder:
 
     self.N: int = len(communicationMatrix)
     """Number of vertices."""
+
+    self._bestVrpSolution: VRPSolution = VRPSolution(INFINITY)
+    """Cached best VRP solution ever found while decoding."""
+
+    self._bestVrpSolutionDms: set[int] = set()
+    """Cached minimum dominating set corresponding to cached VRP solution."""
 
   def chromosome2Set(self, chromosome: BaseChromosome,
                      rewrite: bool = False) -> set[int]:
@@ -88,32 +94,46 @@ class BRKGADecoder:
              rewrite: bool = False) -> float:
     """Decoder interface method."""
 
+    # Calculate the minimum dominating set
+    minimumDominatingSet: set[int] = self.chromosome2Set(chromosome, rewrite)
+
+    # Find a VRP subproblem solution
     vrpSolution: VRPSolution = getMininumVehicleRouting(
       seed=self._seed,
       allDistances=self._allDistances,
       baseDistance=self._baseDistance,
-      minimumDominatingSet=self.chromosome2Set(chromosome, rewrite),
+      minimumDominatingSet=minimumDominatingSet,
       timeLimit=self._vrpSolverTimeLimit,
+      bestVrpCost=self._bestVrpSolution.vrpCost,
     )
 
-    return vrpSolution.cost
+    # Save the best solution ever found
+    if vrpSolution.vrpCost < self._bestVrpSolution.vrpCost:
+      self._bestVrpSolutionDms = minimumDominatingSet
+      self._bestVrpSolution = vrpSolution
+
+    # Return the VRP solution cost as fitness
+    return vrpSolution.vrpCost
+
+  def getBestEverFound(self) -> tuple[VRPSolution, set[int]]:
+    """Return a tuple with the best VRP solution ever found with the corresponding MDS."""
+    return (self._bestVrpSolution, self._bestVrpSolutionDms)
 
 
 class HybridBrkgaSolution(VRPSolution):
   """Class the holds the Hybrid BRKGA subproblem result."""
 
-  def __init__(self, cost: float, *,
-               minimumDominatingSet: Optional[set[int]] = None,
-               evolutionPerGen: Optional[list[float]] = None,
+  def __init__(self, *, minimumDominatingSet: set[int] = set(),
+               evolutionPerGen: list[float] = list(),
                **kwargs: dict[str, Any]) -> None:
 
     # Build the parent object
-    super().__init__(cost, **kwargs)
+    super().__init__(**kwargs)
 
-    self.minimumDominatingSet: Optional[set[int]] = minimumDominatingSet
+    self.minimumDominatingSet: set[int] = minimumDominatingSet
     """The minimum dominating set corresponding to the solution with the best fitness ever found."""
 
-    self.evolutionPerGen: Optional[list[float]] = evolutionPerGen
+    self.evolutionPerGen: list[float] = evolutionPerGen
     """The best fitness in the population for each generation evolved."""
 
 
@@ -191,20 +211,25 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
         print(f"Generation {i}. Stopping due to stagnation since generation {i-100}.")
         break
 
-  # Debug and evaluation
-  if quiet ==False:
+  # Retrieve the best solution ever found
+  (bestVrpSolution, bestMds) = decoder.getBestEverFound()
+
+  # Debug
+  if not quiet:
     mdsSolution: set[int] = decoder.chromosome2Set(ga.get_best_chromosome())
     print(f"MDS Solution: {sorted(mdsSolution)}\n")
+    assert bestMds == mdsSolution
 
     vrpSolution: VRPSolution = getMininumVehicleRouting(
       seed=seed, allDistances=allDistances, baseDistance=baseDistance,
       minimumDominatingSet=mdsSolution, timeLimit=vrpSolverTimeLimit,
       quiet=False)
 
-    assert abs(vrpSolution.cost - ga.get_best_fitness()) < 0.000_001, f"{(vrpSolution.cost, ga.get_best_fitness())}"
+    assert abs(vrpSolution.vrpCost - ga.get_best_fitness()) < 0.000_001, f"{(vrpSolution.vrpCost, ga.get_best_fitness())}"
+    assert abs(vrpSolution.vrpCost - bestVrpSolution.vrpCost) < 0.000_001, f"{(vrpSolution.vrpCost, bestVrpSolution.vrpCost)}"
+    del vrpSolution
+    del mdsSolution
 
-    return HybridBrkgaSolution(minimumDominatingSet=mdsSolution,
-                               evolutionPerGen=evolutionPerGen,
-                               **vars(vrpSolution))
-
-  return HybridBrkgaSolution(ga.get_best_fitness())
+  return HybridBrkgaSolution(minimumDominatingSet=bestMds,
+                             evolutionPerGen=evolutionPerGen,
+                             **vars(bestVrpSolution))

@@ -18,8 +18,6 @@ colorama==0.4.6
     #   click
 contourpy==1.0.6
     # via matplotlib
-cplex==22.1.0.0
-    # via -r requirements.in
 cycler==0.11.0
     # via matplotlib
 docplex==2.24.232
@@ -42,6 +40,7 @@ numpy==1.24.1
     #   contourpy
     #   matplotlib
     #   pandas
+    #   scipy
 packaging==21.3
     # via
     #   build
@@ -66,6 +65,8 @@ python-dateutil==2.8.2
     #   pandas
 pytz==2022.7
     # via pandas
+scipy==1.9.3
+    # via -r requirements.in
 six==1.16.0
     # via
     #   docplex

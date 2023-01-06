@@ -3,18 +3,21 @@
 
 from .PreProcessing import read_input
 from .MinimumDominatingSet import (HybridBrkgaSolution, solveHybridBrkga)
+from .LocalBranching import (LocalBranchingSolution, solveLocalBranching)
 from contextlib import redirect_stdout
 from typing import (Any, TextIO)
 from io import StringIO
+from os import path
 import timeit
 import sys
 
 
-class HybridDMRPSolution(HybridBrkgaSolution):
-  """Class the holds the Hybrid DMRP result."""
+class HybridDMRPSolution(LocalBranchingSolution):
+  """Class the holds the Hybrid DMRP final result."""
 
   def __init__(
     self,
+    instancePath: str,
     base: tuple[float, float],
     coordenates: list[tuple[float, float]],
     allDistances: list[list[float]],
@@ -41,6 +44,9 @@ class HybridDMRPSolution(HybridBrkgaSolution):
     self.elapsedSeconds: float = elapsedSeconds
     """The total time spent running the algorithm (seconds)."""
 
+    self.instanceFileName: str = path.basename(instancePath)
+    """Instance file name."""
+
     self.N: int = len(allDistances)
     """Number of vertices."""
 
@@ -48,7 +54,8 @@ class HybridDMRPSolution(HybridBrkgaSolution):
 def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
                     num_generations: int, population_size: int,
                     elite_percentage: float, mutants_percentage: float,
-                    total_parents: int, num_elite_parents: int):
+                    total_parents: int, num_elite_parents: int,
+                    isCLI: bool = False):
 
   # Disable debug printing
   devNull: StringIO = StringIO()
@@ -79,11 +86,15 @@ def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
       total_parents=total_parents, num_elite_parents=num_elite_parents,
       quiet=quiet)
 
+    localBranchingSolution: LocalBranchingSolution = solveLocalBranching(
+      hybridBrkgaSolution, seed=seed, allDistances=all_distances,
+      baseDistance=base_distance, isCLI=isCLI, quiet=quiet)
+
     endTime: float = timeit.default_timer()
 
   # Return the solution and statistics for the caller
-  return HybridDMRPSolution(base=base, coordenates=coordenates,
-                            allDistances=all_distances,
+  return HybridDMRPSolution(instancePath=instance.name, base=base,
+                            coordenates=coordenates, allDistances=all_distances,
                             baseDistance=base_distance,
                             elapsedSeconds=endTime - startTime,
-                            **vars(hybridBrkgaSolution))
+                            **vars(localBranchingSolution))
