@@ -8,6 +8,7 @@ from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
 from .ConstructiveHeurisitc import generateInitialPopulation
 from .VehicleRouting import (VRPSolution, getMininumVehicleRouting)
 from typing import (Any, NamedTuple)
+import timeit
 
 INFINITY: float = float("inf")
 
@@ -125,7 +126,7 @@ class HybridBrkgaSolution(VRPSolution):
 
   def __init__(self, *, minimumDominatingSet: set[int] = set(),
                evolutionPerGen: list[float] = list(),
-               **kwargs: dict[str, Any]) -> None:
+               gaElapsedSeconds: float = 0.0, **kwargs: dict[str, Any]) -> None:
 
     # Build the parent object
     super().__init__(**kwargs)
@@ -135,6 +136,9 @@ class HybridBrkgaSolution(VRPSolution):
 
     self.evolutionPerGen: list[float] = evolutionPerGen
     """The best fitness in the population for each generation evolved."""
+
+    self.gaElapsedSeconds: float = gaElapsedSeconds
+    """The time spent running the Hybrid BRKGA algorith (seconds)."""
 
 
 def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
@@ -173,6 +177,9 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
                               chromosome_size=len(communicationMatrix),
                               params=params)
 
+  # Account the time spent running the BRKGA
+  startTime: float = timeit.default_timer()
+
   # Use a semi-greedy heuristic to create an initial population
   ga.set_initial_population(
     generateInitialPopulation(allDistances, baseDistance, communicationMatrix,
@@ -184,8 +191,7 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
   ga.initialize()
 
   evolutionPerGen[0] = ga.get_best_fitness()
-  bestFitnessSoFar: float = evolutionPerGen[0]
-  bestFitnessCount: int = 1
+  TIME_LIMIT: int = 5 * 60  # Up to 5 minutes
 
   for i in range(1, num_generations + 1):
     ga.evolve(num_generations=1)
@@ -194,25 +200,21 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
     # Debug only
     if quiet ==False:
       if i == 1:
-        print(f"Semi-greedy best solution: {evolutionPerGen[0]}.")
+        print(f"Semi-greedy best solution: {evolutionPerGen[0]:.2f}.")
       elif i % 50 == 0:
-        print(f"Generation {i} best fitness: {evolutionPerGen[i]}.")
+        print(f"Generation {i} best fitness: {evolutionPerGen[i]:.2f}.")
 
-    if evolutionPerGen[i] < bestFitnessSoFar:
-      bestFitnessSoFar = evolutionPerGen[i]
-      bestFitnessCount = 1
+    # Maximum time to spend on the BRKGA reached
+    if timeit.default_timer() - startTime > TIME_LIMIT:
+      print(f"Generation {i}. Stopping due to time limit "
+            f"exceeded: {timeit.default_timer() - startTime:.2f} > {TIME_LIMIT}.")
 
-    else:
-      bestFitnessCount += 1
-      assert id(evolutionPerGen[i]) == id(bestFitnessSoFar)
-
-      # Maximum number of generations without any improvement
-      if bestFitnessCount == 100:
-        print(f"Generation {i}. Stopping due to stagnation since generation {i-100}.")
-        break
+      evolutionPerGen = evolutionPerGen[:i + 1]
+      break
 
   # Retrieve the best solution ever found
   (bestVrpSolution, bestMds) = decoder.getBestEverFound()
+  endTime: float = timeit.default_timer()
 
   # Debug
   if not quiet:
@@ -229,7 +231,9 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
     assert abs(vrpSolution.vrpCost - bestVrpSolution.vrpCost) < 0.000_001, f"{(vrpSolution.vrpCost, bestVrpSolution.vrpCost)}"
     del vrpSolution
     del mdsSolution
+    print()
 
   return HybridBrkgaSolution(minimumDominatingSet=bestMds,
                              evolutionPerGen=evolutionPerGen,
+                             gaElapsedSeconds=endTime - startTime,
                              **vars(bestVrpSolution))

@@ -4,6 +4,7 @@
 from .PreProcessing import read_input
 from .MinimumDominatingSet import (HybridBrkgaSolution, solveHybridBrkga)
 from .LocalBranching import (LocalBranchingSolution, solveLocalBranching)
+from localsolver import LSSolutionStatus
 from contextlib import redirect_stdout
 from typing import (Any, TextIO)
 from io import StringIO
@@ -86,9 +87,13 @@ def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
       total_parents=total_parents, num_elite_parents=num_elite_parents,
       quiet=quiet)
 
-    localBranchingSolution: LocalBranchingSolution = solveLocalBranching(
-      hybridBrkgaSolution, seed=seed, allDistances=all_distances,
-      baseDistance=base_distance, isCLI=isCLI, quiet=quiet)
+    if hybridBrkgaSolution.vrpStatus == LSSolutionStatus.FEASIBLE:
+      localBranchingSolution: LocalBranchingSolution = solveLocalBranching(
+        hybridBrkgaSolution, seed=seed, allDistances=all_distances,
+        baseDistance=base_distance, isCLI=isCLI, quiet=quiet)
+
+    else:
+      localBranchingSolution: LocalBranchingSolution = LocalBranchingSolution()
 
     endTime: float = timeit.default_timer()
 

@@ -87,7 +87,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.OPTIMAL_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.OPTIMAL_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 2)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 2)
     self.assertEqual(babSolution.babCost, 20)
@@ -122,7 +122,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.OPTIMAL_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.OPTIMAL_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 3)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 3)
     self.assertEqual(babSolution.babCost, 21)
@@ -157,7 +157,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.OPTIMAL_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.OPTIMAL_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 3)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 4)
     self.assertEqual(babSolution.babCost, 4)
@@ -192,7 +192,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.OPTIMAL_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.OPTIMAL_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 3)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 4)
     self.assertEqual(babSolution.babCost, 40)
@@ -227,7 +227,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.OPTIMAL_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.OPTIMAL_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 4)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 4)
     self.assertEqual(babSolution.babCost, 26)
@@ -262,7 +262,7 @@ class TestLocalBranching(ExtendedTestCase):
     )
 
     # Assert the result
-    self.assertEqual(babSolution.babstatus, JobSolveStatus.INFEASIBLE_SOLUTION)
+    self.assertEqual(babSolution.babStatus, JobSolveStatus.INFEASIBLE_SOLUTION)
     self.assertEqual(babSolution.babGraph.number_of_nodes(), 0)
     self.assertEqual(babSolution.babGraph.number_of_edges(), 0)
     self.assertEqual(babSolution.babCost, float("inf"))

@@ -44,6 +44,10 @@ class VRPSolution:
     self.vrpGraph: MultiDiGraph = vrpGraph
     """A graph (paths) the vehicles must travel in this solution."""
 
+  def usedInVrp(self, i: int, j: int) -> bool:
+    """Return True if the edge (i, j) is used by the VRP solution, False otherwise."""
+    return self.vrpGraph.has_edge(i, j)
+
 
 def getMininumVehicleRouting(*, seed: int, allDistances: list[list[float]],
                              baseDistance: list[float],

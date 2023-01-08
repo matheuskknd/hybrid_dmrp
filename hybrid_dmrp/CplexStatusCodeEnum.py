@@ -81,34 +81,40 @@ class CplexStatusCodeEnum(Enum):
   CPX_STAT_MULTIOBJ_STOPPED = 306
 
 
-def convertStatus(status: CplexStatusCodeEnum) -> JobSolveStatus:
-  conversionDict: dict[CplexStatusCodeEnum, JobSolveStatus] = {
-    CplexStatusCodeEnum.CPX_STAT_OPTIMAL: JobSolveStatus.OPTIMAL_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_OPTIMAL: JobSolveStatus.OPTIMAL_SOLUTION,
-    CplexStatusCodeEnum.CPX_STAT_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
-    CplexStatusCodeEnum.CPX_STAT_INFEASIBLE: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPX_STAT_OPTIMAL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_INFEASIBLE: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_NODE_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_TIME_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_FAIL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_MEM_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_ABORT_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_OPTIMAL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_FAIL_INFEAS_NO_TREE: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_DETTIME_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPX_STAT_INForUNBD: JobSolveStatus.INFEASIBLE_OR_UNBOUNDED_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_INForUNBD: JobSolveStatus.INFEASIBLE_OR_UNBOUNDED_SOLUTION,
-    CplexStatusCodeEnum.CPX_STAT_FEASIBLE: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_FEASIBLE: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_NODE_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_TIME_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_FAIL_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_MEM_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_ABORT_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_FAIL_FEAS_NO_TREE: JobSolveStatus.FEASIBLE_SOLUTION,
-    CplexStatusCodeEnum.CPXMIP_DETTIME_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
-  }
+_conversionDict: dict[CplexStatusCodeEnum, JobSolveStatus] = {
+  CplexStatusCodeEnum.CPX_STAT_OPTIMAL: JobSolveStatus.OPTIMAL_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_OPTIMAL: JobSolveStatus.OPTIMAL_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_OPTIMAL_FACE_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_ABORT_RELAXATION_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_MULTIOBJ_UNBOUNDED: JobSolveStatus.UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_INFEASIBLE: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_OPTIMAL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_INFEASIBLE: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_NODE_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_TIME_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_FAIL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_MEM_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_ABORT_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_OPTIMAL_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_FAIL_INFEAS_NO_TREE: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_DETTIME_LIM_INFEAS: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_MULTIOBJ_INFEASIBLE: JobSolveStatus.INFEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_INForUNBD: JobSolveStatus.INFEASIBLE_OR_UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_INForUNBD: JobSolveStatus.INFEASIBLE_OR_UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_MULTIOBJ_INForUNBD: JobSolveStatus.INFEASIBLE_OR_UNBOUNDED_SOLUTION,
+  CplexStatusCodeEnum.CPX_STAT_FEASIBLE: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_FEASIBLE: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_NODE_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_TIME_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_FAIL_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_MEM_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_ABORT_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_FAIL_FEAS_NO_TREE: JobSolveStatus.FEASIBLE_SOLUTION,
+  CplexStatusCodeEnum.CPXMIP_DETTIME_LIM_FEAS: JobSolveStatus.FEASIBLE_SOLUTION,
+}
 
-  return conversionDict.get(status, JobSolveStatus.UNKNOWN)
+
+def convertStatus(status: CplexStatusCodeEnum) -> JobSolveStatus:
+  return _conversionDict.get(status, JobSolveStatus.UNKNOWN)

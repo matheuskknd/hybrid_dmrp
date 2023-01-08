@@ -6,6 +6,7 @@ from networkx import (Graph, eigenvector_centrality)
 from typing import (NamedTuple, Optional, cast)
 from pyllist import (dllist, dllistnode)
 import random
+import timeit
 
 INFINITY: float = float("inf")
 
@@ -72,6 +73,9 @@ def generateInitialPopulation(allDistances: list[list[float]],
   assert chromosome_size == len(communicationMatrix)
   assert chromosome_size == len(allDistances)
   assert chromosome_size == len(baseDistance)
+
+  print("Running the semi-greedy constructive... ", end="")
+  startTime: float = timeit.default_timer()
 
   # Set the random seed before doing anything
   random.seed(seed)
@@ -152,4 +156,9 @@ def generateInitialPopulation(allDistances: list[list[float]],
     return chromosome
 
   # Generate the chromosomes
-  return [createChromosome() for _ in range(population_size)]
+  firstPopulation: list[BaseChromosome] = [
+    createChromosome() for _ in range(population_size)
+  ]
+
+  print(f"Done after: {timeit.default_timer() - startTime:.2f} s")
+  return firstPopulation
