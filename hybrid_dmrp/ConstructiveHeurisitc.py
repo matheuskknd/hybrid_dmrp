@@ -63,7 +63,8 @@ def generateRclBase(allDistances: list[list[float]],
 
 def generateInitialPopulation(allDistances: list[list[float]],
                               baseDistance: list[float],
-                              communicationMatrix: list[list[int]], *, seed: int,
+                              communicationMatrix: list[list[int]],
+                              rclBaseList: list[RclItem], *, seed: int,
                               population_size: int, chromosome_size: int,
                               alpha: float = 0.5) -> list[BaseChromosome]:
   """
@@ -79,10 +80,6 @@ def generateInitialPopulation(allDistances: list[list[float]],
 
   # Set the random seed before doing anything
   random.seed(seed)
-
-  # Generate the RCL base list
-  rclBaseList: list[RclItem] = generateRclBase(allDistances,
-                                               communicationMatrix)
 
   # Auxiliar variables
   _communicationMatrix: list[frozenset[int]] = [

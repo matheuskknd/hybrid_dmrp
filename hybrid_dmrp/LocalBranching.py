@@ -245,7 +245,7 @@ def bounded_kara2011_F2(solution: HybridBrkgaSolution, *, seed: int,
     ################################
 
     # Remaining time in seconds: up to 20 minutes
-    timelimit: int = math.ceil(20*60 - solution.gaElapsedSeconds)
+    timelimit: int = math.ceil(20*60 - min(20*60 - 1, solution.gaElapsedSeconds))
     # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
 
     # https://ibmdecisionoptimization.github.io/docplex-doc/cp/docplex.cp.parameters.py.html

@@ -4,20 +4,32 @@
 from hybrid_dmrp import (HybridDMRPSolution, solveHybridDMRP, CplexStatusCodeEnum)
 from os.path import (abspath, basename, dirname, join, exists)
 from contextlib import (redirect_stdout, redirect_stderr)
+from hybrid_dmrp.PreProcessing import read_input
+from typing import (Any, NamedTuple)
 from adjustText import adjust_text
 from networkx import MultiDiGraph
+from numpy.typing import NDArray
 from localsolver import LSEnum
+from itertools import product
+from datetime import datetime
 from matplotlib import pyplot
 from pandas import DataFrame
-from typing import Any
 from enum import Enum
 import traceback
 import random
-import timeit
 import numpy
 import glob
 import json
 import os
+
+# Change for this script execution path
+workingDir: str = dirname(abspath(__file__))
+os.chdir(workingDir)
+
+# Create a directory to store the results
+resultDirName: str = "results"
+if not exists(resultDirName):
+  os.mkdir(resultDirName)
 
 
 def jsonSerializer(o: Any) -> Any:
@@ -194,54 +206,30 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
   pyplot.cla()
 
 
-# Change for this script execution path
-workingDir: str = dirname(abspath(__file__))
-os.chdir(workingDir)
-
-# Create a directory to store the results
-resultDirName: str = str(timeit.default_timer())
-print(f"Storing the results in: {resultDirName}.")
-os.mkdir(resultDirName)
-
-# Get the list of instances to run
-instanceDir: str = join(workingDir, "instances")
-_instanceFileNameList: list[str] = glob.glob(
-  join(instanceDir, "_").removesuffix("_") + "*.csv",
-)
-
-instanceFileNameList: list[tuple[str, int]] = []
-
-for instance in _instanceFileNameList:
-  with open(instance, "r", encoding="UTF-8") as instanceFile:
-    instanceFileNameList.append((instance, int(instanceFile.readline())))
-
-instanceFileNameList = sorted(instanceFileNameList, key=lambda pair: pair[1])
-del _instanceFileNameList
-del instanceFile
-del instanceDir
-del workingDir
-del instance
-
-
 def main():
+  print(f"Starting new run... {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')}\n")
 
-  # Overall data statistics
-  # statisticsDict: dict[str, list[Any]] = {
-  #   "instance": [],
-  #   "min_cost": [],
-  #   "max_cost": [],
-  #   "mean_cost": [],
-  #   "min_time": [],
-  #   "max_time": [],
-  #   "mean_time": [],
-  # }
+  # Get the list of instances to run
+  instanceDir: str = join(workingDir, "instances")
+  _instanceFileNameList: list[str] = glob.glob(
+    join(instanceDir, "**", "_").removesuffix("_") + "*.csv",
+    recursive=True,
+  )
+
+  instanceFileNameList: list[tuple[str, int]] = []
+
+  for instance in _instanceFileNameList:
+    with open(instance, "r", encoding="UTF-8") as instanceFile:
+      instanceFileNameList.append((instance, int(instanceFile.readline())))
+
+  instanceFileNameList = sorted(instanceFileNameList, key=lambda pair: pair[1])
+  del _instanceFileNameList
+  del instanceFile
+  del instanceDir
+  del instance
 
   # Number of rounds
   NB_SAMPLES: int = 3
-
-  # Auxliar variables
-  # costSamples: list[float] = [0.0] * NB_SAMPLES
-  # timeSamples: list[float] = [0.0] * NB_SAMPLES
 
   # Run the algorithm NB_SAMPLES times for each instance with the same parameters
   for run in range(NB_SAMPLES):
@@ -257,11 +245,15 @@ def main():
       babScatterFileName: str = join(instanceResultDir,
                                      f"bab_scatter_{run}.png")
 
-      with open(instance, "r", encoding="UTF-8") as instanceFile:
-        try:
+      # Skip already run examples
+      if exists(instanceResultDir) and exists(solutionFileName):
+        continue
+
+      try:
+        with open(instance, "r", encoding="UTF-8") as instanceFile:
           seed: int = random.randint(1, 1000)
           print("\n########")
-          print(f"(Seed: {seed}, Run: {run}, Instance: {instanceBaseName})\n")
+          print(f"Seed: {seed}; Run: {run}; Instance: {instanceBaseName};\n")
 
           hybridDMRPSolution: HybridDMRPSolution = solveHybridDMRP(
             instanceFile,
@@ -275,40 +267,43 @@ def main():
             num_elite_parents=2,
           )
 
-        except KeyboardInterrupt:
-          print(f"\nKeyboardInterrupt in {run} of {instanceBaseName}")
-          exit(1)
+      except KeyboardInterrupt:
+        print(f"\nKeyboardInterrupt in {run} of {instanceBaseName}")
+        exit(1)
 
-        except BaseException as e:
-          print(f"\nErro in {run} of {instanceBaseName}:\n{e}\n")
-          print(traceback.format_exc())
-          continue
+      except BaseException as e:
+        print(f"\nErro in {run} of {instanceBaseName}:\n{e}\n")
+        print(traceback.format_exc())
+        continue
 
       # Create the result directory on success
       if not exists(instanceResultDir):
         os.mkdir(instanceResultDir)
 
+      # Forces the statistics to be recalculated in the future
+      if exists(join(instanceResultDir, "summary.csv")):
+        os.remove(join(instanceResultDir, "summary.csv"))
+
       # Save the best fitness per generation curve
-      evoCurvePlot(hybridDMRPSolution, evoCurveFileName)
+      if not exists(evoCurveFileName):
+        evoCurvePlot(hybridDMRPSolution, evoCurveFileName)
 
       # Save the best solution as a scatter plot
-      solutionScatterPlot(
-        hybridDMRPSolution,
-        hybridDMRPSolution.vrpCost,
-        hybridDMRPSolution.vrpGraph,
-        vrpScatterFileName,
-      )
+      if not exists(vrpScatterFileName):
+        solutionScatterPlot(
+          hybridDMRPSolution,
+          hybridDMRPSolution.vrpCost,
+          hybridDMRPSolution.vrpGraph,
+          vrpScatterFileName,
+        )
 
-      solutionScatterPlot(
-        hybridDMRPSolution,
-        hybridDMRPSolution.babCost,
-        hybridDMRPSolution.babGraph,
-        babScatterFileName,
-      )
-
-      # Save the result for statistics
-      # timeSamples[run] = hybridDMRPSolution.elapsedSeconds
-      # costSamples[run] = hybridDMRPSolution.vrpCost
+      if not exists(babScatterFileName):
+        solutionScatterPlot(
+          hybridDMRPSolution,
+          hybridDMRPSolution.babCost,
+          hybridDMRPSolution.babGraph,
+          babScatterFileName,
+        )
 
       # Save the result object (serialized)
       with open(solutionFileName, "w", encoding="UTF-8") as solutionFile:
@@ -344,40 +339,227 @@ def main():
 
       del hybridDMRPSolution
 
-    # Save some statistics
-    # statisticsDict["instance"].append(instanceBaseName)
-    # statisticsDict["min_cost"].append(numpy.min(costSamples))
-    # statisticsDict["max_cost"].append(numpy.max(costSamples))
-    # statisticsDict["mean_cost"].append(numpy.mean(costSamples))
-    # statisticsDict["min_time"].append(numpy.min(timeSamples))
-    # statisticsDict["max_time"].append(numpy.max(timeSamples))
-    # statisticsDict["mean_time"].append(numpy.mean(timeSamples))
+
+def printStatistics() -> None:
+  # Change for this script execution path
+  workingDir: str = join(dirname(abspath(__file__)), resultDirName)
+  os.chdir(workingDir)
+
+  # Get the list of instances to run
+  _instanceFileNameList: list[str] = glob.glob(
+    join(workingDir, "**", "_").removesuffix("_") + "*.json",
+    recursive=True,
+  )
+
+  # Separe the information about instances and runs
+  instanceDict: dict[str, dict[str, list[Any]]] = dict()
+  maxRuns: int = 0
+
+  for absolutePath in _instanceFileNameList:
+    instanceName: str = basename(dirname(absolutePath))
+
+    with open(absolutePath, "r", encoding="UTF-8") as file:
+      solution: dict[str, Any] = json.load(file)
+
+    del file
+
+    if instanceName not in instanceDict:
+      instanceDict[instanceName] = {
+        "absolutePath": [absolutePath],
+        "vrpCost": [solution["vrpCost"]],
+        "vrpStatus": [solution["vrpStatus"]],
+        "autonomy": [solution["autonomy"]],
+        "|MDS|": [len(solution["minimumDominatingSet"])],
+        "NB_GENS": [len(solution["evolutionPerGen"])],
+        "SGC_Best": [solution["evolutionPerGen"][0]],
+        "gaTime": [solution["gaElapsedSeconds"]],
+        "babCost": [solution["babCost"]],
+        "babStatus": [solution["babStatus"]],
+        "babTime": [solution["babElapsedSeconds"]],
+      }
+
+    else:
+      targetDict: dict[str, list[Any]] = instanceDict[instanceName]
+      targetDict["absolutePath"].append(absolutePath)
+      targetDict["vrpCost"].append(solution["vrpCost"])
+      targetDict["vrpStatus"].append(solution["vrpStatus"])
+      targetDict["autonomy"].append(solution["autonomy"])
+      targetDict["|MDS|"].append(len(solution["minimumDominatingSet"]))
+      targetDict["NB_GENS"].append(len(solution["evolutionPerGen"]))
+      targetDict["SGC_Best"].append(solution["evolutionPerGen"][0])
+      targetDict["gaTime"].append(solution["gaElapsedSeconds"])
+      targetDict["babCost"].append(solution["babCost"])
+      targetDict["babStatus"].append(solution["babStatus"])
+      targetDict["babTime"].append(solution["babElapsedSeconds"])
+      del targetDict
+
+    maxRuns = max(maxRuns, len(instanceDict[instanceName]["|MDS|"]))
+
+  del _instanceFileNameList
+  del absolutePath
+
+  # Create a DataFrame
+  statisticsDict: dict[str, list[float]] = {
+    "instance": [],
+    "NbRuns": [],
+  }
+
+  class Agregation(NamedTuple):
+    name: str
+    run: callable
+
+  class PropName(NamedTuple):
+    pubName: str
+    privName: str
+
+  def infResistentStd(a: NDArray[numpy.float64]) -> float:
+    if max(a) == float("inf"):
+      return float("inf")
+    else:
+      return numpy.std(a, ddof=1)
+
+  for instanceName in instanceDict:
+    targetDict: dict[str, list[Any]] = instanceDict[instanceName]
 
     # Convert the collected samples to a pandas DataFrame and save it into a CSV file
-    # DataFrame(data={
-    #   "cost": costSamples,
-    #   "seconds": timeSamples,
-    # }).to_csv(
-    #   join(instanceResultDir, "summary.csv"),
-    #   sep="\t",
-    #   index=False,
-    #   encoding="UTF-8",
-    # )
+    if not exists(join(instanceName, "summary.csv")):
+      print(f"Printing {join(instanceName, 'summary.csv')}")
+      DataFrame(data=targetDict).to_csv(
+        join(instanceName, "summary.csv"),
+        sep="\t",
+        index=False,
+        encoding="UTF-8",
+      )
 
-  # Convert the Overall data statistics to a pandas DataFrame and save it into a CSV file
-  # DataFrame(data=statisticsDict).to_csv(
-  #   join(resultDirName, "summary.csv"),
-  #   sep="\t",
-  #   index=False,
-  #   encoding="UTF-8",
-  # )
+    # Fixed number of columns
+    statisticsDict["instance"].append(instanceName)
+    statisticsDict["NbRuns"].append(len(targetDict["autonomy"]))
+
+    # Number of columns depends on how many aggregations are done
+    for (agr, prop) in product((
+        Agregation("min", numpy.min),
+        Agregation("max", numpy.max),
+        Agregation("mean", numpy.mean),
+        Agregation("std", infResistentStd),
+    ), (
+        PropName("ga_cost", "vrpCost"),
+        PropName("ga_time", "gaTime"),
+        PropName("bab_cost", "babCost"),
+        PropName("bab_time", "babTime"),
+    )):
+      propName: str = f"{prop.pubName}_{agr.name}"
+      value: float = agr.run(targetDict[prop.privName])
+
+      if propName not in statisticsDict:
+        statisticsDict[propName] = [value]
+      else:
+        statisticsDict[propName].append(value)
+
+    # Result file names
+    for i in range(statisticsDict["NbRuns"][-1]):
+      solutionFileName: str = targetDict["absolutePath"][i]
+      run: int = int(solutionFileName.removesuffix(".json").split("_")[-1])
+
+      evoCurveFileName: str = join(instanceName, f"evo_curve_{run}.png")
+      vrpScatterFileName: str = join(instanceName, f"vrp_scatter_{run}.png")
+      babScatterFileName: str = join(instanceName, f"bab_scatter_{run}.png")
+
+      with open(solutionFileName, "r", encoding="UTF-8") as file:
+        solution: dict[str, Any] = json.load(file)
+        solution["minimumDominatingSet"] = set(solution["minimumDominatingSet"])
+        solution["vrpGraph"] = MultiDiGraph(solution["vrpGraph"])
+        solution["babGraph"] = MultiDiGraph(solution["babGraph"])
+
+      instanceFileName: str = join(
+        dirname(dirname(dirname(solutionFileName))),
+        "instances",
+        solution["instanceFileName"],
+      )
+
+      # Skip the repair if the instance is not present anymore
+      if not exists(instanceFileName):
+        continue
+
+      with open(instanceFileName, "r", encoding="UTF-8") as file:
+        (
+          all_distances,
+          base_distance,
+          _,
+          base,
+          coordenates,
+        ) = read_input(file)
+
+        solution["allDistances"] = all_distances
+        solution["baseDistance"] = base_distance
+        solution["coordenates"] = coordenates
+        solution["base"] = base
+
+      del (all_distances, base_distance, _, base, coordenates)
+      del file
+
+      # Rebuild the solution object
+      del solution["instanceFileName"]
+      del solution["N"]
+
+      hybridDMRPSolution: HybridDMRPSolution = HybridDMRPSolution(
+        instancePath="", **solution)
+
+      del solution
+
+      # Save the best fitness per generation curve
+      if not exists(evoCurveFileName):
+        print(f"Reprinting {evoCurveFileName}")
+        evoCurvePlot(hybridDMRPSolution, evoCurveFileName)
+
+      # Save the best solution as a scatter plot
+      if not exists(vrpScatterFileName):
+        print(f"Reprinting {vrpScatterFileName}")
+        solutionScatterPlot(
+          hybridDMRPSolution,
+          hybridDMRPSolution.vrpCost,
+          hybridDMRPSolution.vrpGraph,
+          vrpScatterFileName,
+        )
+
+      if not exists(babScatterFileName):
+        print(f"Reprinting {babScatterFileName}")
+        solutionScatterPlot(
+          hybridDMRPSolution,
+          hybridDMRPSolution.babCost,
+          hybridDMRPSolution.babGraph,
+          babScatterFileName,
+        )
+
+      del hybridDMRPSolution
+      del solutionFileName
+      del evoCurveFileName
+      del vrpScatterFileName
+      del babScatterFileName
+      del instanceFileName
+      del run
+
+  # At the end, we save the statistics
+  if not exists(join(workingDir, "summary.csv")):
+    print(f"Printing {join(workingDir, 'summary.csv')}")
+    DataFrame(data=statisticsDict).to_csv(
+      join(workingDir, "summary.csv"),
+      sep="\t",
+      index=False,
+      encoding="UTF-8",
+    )
 
 
 stdoutLogName: str = join(resultDirName, "stdout.txt")
 stderrLogName: str = join(resultDirName, "stderr.txt")
 
-with open(stdoutLogName, "w+", encoding="UTF-8") as stdoutLog:
-  with open(stderrLogName, "w+", encoding="UTF-8") as stderrLog:
+with open(stdoutLogName, "a+", encoding="UTF-8") as stdoutLog:
+  with open(stderrLogName, "a+", encoding="UTF-8") as stderrLog:
     with redirect_stdout(stdoutLog):
       with redirect_stderr(stderrLog):
+        print(f"Storing the results in: {resultDirName}.")
         main()
+
+        # Always print the statistics after running the main evalution
+        printStatistics()
+        print(f"Finished run at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+        print("################")

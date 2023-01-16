@@ -1,11 +1,16 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
+from .ConstructiveHeurisitc import (
+  RclItem,
+  generateInitialPopulation,
+  generateRclBase,
+)
+
 from brkga_mp_ipr.algorithm import BrkgaMpIpr
 from brkga_mp_ipr.types import (BrkgaParams, BaseChromosome)
 from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
-from .ConstructiveHeurisitc import generateInitialPopulation
 from .VehicleRouting import (VRPSolution, getMininumVehicleRouting)
 from typing import (Any, NamedTuple)
 import timeit
@@ -51,8 +56,7 @@ class BRKGADecoder:
     self._bestVrpSolutionDms: set[int] = set()
     """Cached minimum dominating set corresponding to cached VRP solution."""
 
-  def chromosome2Set(self, chromosome: BaseChromosome,
-                     rewrite: bool = False) -> set[int]:
+  def chromosome2Set(self, chromosome: BaseChromosome) -> set[int]:
 
     # Auxliar list for sorting by gene value
     sortedByGeneList: list[Item] = [
@@ -66,28 +70,14 @@ class BRKGADecoder:
     # Set of nodes to visit
     selectedNodeSet: set[int] = set()
 
-    if rewrite ==False:
-      for i in sortedByGeneList:
-        if not visitedList[i.index]:
-          selectedNodeSet.add(i.index)
+    for i in sortedByGeneList:
+      if not visitedList[i.index]:
+        selectedNodeSet.add(i.index)
 
-          # Mark i and its neighboors as visited
-          visitedList[i.index] = True
-          for j in self._communicationMatrix[i.index]:
-            visitedList[j] = True
-
-    else:
-      for i in sortedByGeneList:
-        if not visitedList[i.index]:
-          selectedNodeSet.add(i.index)
-
-          # Mark i and its neighboors as visited and rewrite the chromosome
-          visitedList[i.index] = True
-          chromosome[i.index] = 1
-
-          for j in self._communicationMatrix[i.index]:
-            visitedList[j] = True
-            chromosome[j] = 0
+        # Mark i and its neighboors as visited
+        visitedList[i.index] = True
+        for j in self._communicationMatrix[i.index]:
+          visitedList[j] = True
 
     return selectedNodeSet
 
@@ -96,7 +86,7 @@ class BRKGADecoder:
     """Decoder interface method."""
 
     # Calculate the minimum dominating set
-    minimumDominatingSet: set[int] = self.chromosome2Set(chromosome, rewrite)
+    minimumDominatingSet: set[int] = self.chromosome2Set(chromosome)
 
     # Find a VRP subproblem solution
     vrpSolution: VRPSolution = getMininumVehicleRouting(
@@ -177,13 +167,18 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
                               chromosome_size=len(communicationMatrix),
                               params=params)
 
+  # Generate the RCL base list
+  rclBaseList: list[RclItem] = generateRclBase(allDistances,
+                                               communicationMatrix)
+
   # Account the time spent running the BRKGA
   startTime: float = timeit.default_timer()
 
   # Use a semi-greedy heuristic to create an initial population
   ga.set_initial_population(
     generateInitialPopulation(allDistances, baseDistance, communicationMatrix,
-                              seed=seed, population_size=population_size,
+                              rclBaseList, seed=seed,
+                              population_size=population_size,
                               chromosome_size=len(allDistances)))
 
   # Run the BRKGA

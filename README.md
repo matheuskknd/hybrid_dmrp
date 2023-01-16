@@ -7,8 +7,9 @@ Also, IBM's [ILOG CPLEX Optimization Studio](https://www.ibm.com/products/ilog-c
 Bash (Linux)
 
 ```bash
-cd "$(which cplex | sed 's/\/cplex$//')/../../../../../.."
-python3 IBM/ILOG/CPLEX_Studio221/python/setup.py install --user # Or as sudo
+sudo ln -s '/home/<user>/apps/ibm' '/opt/ibm'
+sudo ln -s '/home/<user>/apps/localsolver_11_5' '/opt/localsolver_11_5'
+echo -e 'PATH="$PATH:/opt/ibm/ILOG/CPLEX_Studio2211/cplex/bin/x86-64_linux"\n' >>~/.bashrc
 ```
 
 CMD (Admin)
@@ -16,7 +17,7 @@ CMD (Admin)
 ```bash
 where cplex | sed 's/\\\\cplex.exe$//' | sed 's/\//\\\\/g'
 cd "<last_output>\..\..\..\..\..\.."
-python3 IBM\ILOG\CPLEX_Studio221\python\setup.py install --user
+python3 "IBM\ILOG\CPLEX_Studio2211\python\setup.py" install --user
 ```
 
 Execute the following to enter a virtual environment depending on your terminal interpreter:
@@ -28,6 +29,7 @@ python3 -m venv --clear .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python "/opt/ibm/ILOG/CPLEX_Studio2211/python/setup.py" install
 python -m pip install localsolver -i "https://pip.localsolver.com"
 ```
 
