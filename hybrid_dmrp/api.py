@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
-from .PreProcessing import read_input
+from .PreProcessing import (InstanceData, read_input)
 from .MinimumDominatingSet import (HybridBrkgaSolution, solveHybridBrkga)
 from .LocalBranching import (LocalBranchingSolution, solveLocalBranching)
 from localsolver import LSSolutionStatus
@@ -65,32 +65,26 @@ def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
 
   with redirect_stdout(devNull if quiet else sys.stdout):
     # Read the instance file
-    (
-      all_distances,
-      base_distance,
-      comunicacoes,
-      base,
-      coordenates,
-    ) = read_input(instance)
+    instanceData: InstanceData = read_input(instance)
 
-    assert len(all_distances[0]) == len(base_distance)
-    assert len(coordenates) == len(base_distance)
+    assert len(instanceData.distance_matrix[0]) == len(instanceData.distance_from_base)
+    assert len(instanceData.coordenates) == len(instanceData.distance_from_base)
 
     # Account the time spent running the metaheuristics
     startTime: float = timeit.default_timer()
 
     # Execute the hybrid heuristics
     hybridBrkgaSolution: HybridBrkgaSolution = solveHybridBrkga(
-      all_distances, base_distance, comunicacoes, seed=seed,
-      num_generations=num_generations, population_size=population_size,
-      elite_percentage=elite_percentage, mutants_percentage=mutants_percentage,
-      total_parents=total_parents, num_elite_parents=num_elite_parents,
-      quiet=quiet)
+      instanceData, seed=seed, num_generations=num_generations,
+      population_size=population_size, elite_percentage=elite_percentage,
+      mutants_percentage=mutants_percentage, total_parents=total_parents,
+      num_elite_parents=num_elite_parents, quiet=quiet)
 
     if hybridBrkgaSolution.vrpStatus == LSSolutionStatus.FEASIBLE:
       localBranchingSolution: LocalBranchingSolution = solveLocalBranching(
-        hybridBrkgaSolution, seed=seed, allDistances=all_distances,
-        baseDistance=base_distance, isCLI=isCLI, quiet=quiet)
+        hybridBrkgaSolution, seed=seed,
+        allDistances=instanceData.distance_matrix,
+        baseDistance=instanceData.distance_from_base, isCLI=isCLI, quiet=quiet)
 
     else:
       localBranchingSolution: LocalBranchingSolution = LocalBranchingSolution()
@@ -98,8 +92,9 @@ def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
     endTime: float = timeit.default_timer()
 
   # Return the solution and statistics for the caller
-  return HybridDMRPSolution(instancePath=instance.name, base=base,
-                            coordenates=coordenates, allDistances=all_distances,
-                            baseDistance=base_distance,
+  return HybridDMRPSolution(instancePath=instance.name, base=instanceData.base,
+                            coordenates=instanceData.coordenates,
+                            allDistances=instanceData.distance_matrix,
+                            baseDistance=instanceData.distance_from_base,
                             elapsedSeconds=endTime - startTime,
                             **vars(localBranchingSolution))

@@ -1,13 +1,10 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
-from .ConstructiveHeurisitc import (
-  RclItem,
-  generateInitialPopulation,
-  generateRclBase,
-)
-
 from brkga_mp_ipr.algorithm import BrkgaMpIpr
+
+from hybrid_dmrp.PreProcessing import InstanceData
+from .ConstructiveHeurisitc import generateInitialPopulation
 from brkga_mp_ipr.types import (BrkgaParams, BaseChromosome)
 from brkga_mp_ipr.enums import (BiasFunctionType, PathRelinkingSelection,
                                 PathRelinkingType, Sense)
@@ -131,17 +128,16 @@ class HybridBrkgaSolution(VRPSolution):
     """The time spent running the Hybrid BRKGA algorith (seconds)."""
 
 
-def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
-                     communicationMatrix: list[list[int]], *, seed: int,
-                     num_generations: int, population_size: int,
-                     elite_percentage: float, mutants_percentage: float,
-                     total_parents: int, num_elite_parents: int,
-                     vrpSolverTimeLimit: float = 5,
+def solveHybridBrkga(instance: InstanceData, *, seed: int, num_generations: int,
+                     population_size: int, elite_percentage: float,
+                     mutants_percentage: float, total_parents: int,
+                     num_elite_parents: int, vrpSolverTimeLimit: float = 5,
                      quiet: bool = False) -> HybridBrkgaSolution:
 
   # BRKGA decoder
-  decoder: BRKGADecoder = BRKGADecoder(seed, allDistances, baseDistance,
-                                       communicationMatrix,
+  decoder: BRKGADecoder = BRKGADecoder(seed, instance.distance_matrix,
+                                       instance.distance_from_base,
+                                       instance.communication_net,
                                        vrpSolverTimeLimit=vrpSolverTimeLimit)
 
   # BRKGA Hyper-parameters
@@ -164,22 +160,23 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
 
   # BRKGA object
   ga: BrkgaMpIpr = BrkgaMpIpr(decoder, Sense.MINIMIZE, seed=seed,
-                              chromosome_size=len(communicationMatrix),
+                              chromosome_size=len(instance.communication_net),
                               params=params)
-
-  # Generate the RCL base list
-  rclBaseList: list[RclItem] = generateRclBase(allDistances,
-                                               communicationMatrix)
 
   # Account the time spent running the BRKGA
   startTime: float = timeit.default_timer()
 
   # Use a semi-greedy heuristic to create an initial population
   ga.set_initial_population(
-    generateInitialPopulation(allDistances, baseDistance, communicationMatrix,
-                              rclBaseList, seed=seed,
-                              population_size=population_size,
-                              chromosome_size=len(allDistances)))
+    generateInitialPopulation(
+      instance.distance_matrix,
+      instance.distance_from_base,
+      instance.communication_net,
+      rclBaseList=instance.centralities,
+      seed=seed,
+      population_size=population_size,
+      chromosome_size=len(instance.distance_matrix),
+    ))
 
   # Run the BRKGA
   evolutionPerGen: list[float] = [INFINITY] * (num_generations+1)
@@ -218,9 +215,9 @@ def solveHybridBrkga(allDistances: list[list[float]], baseDistance: list[float],
     assert bestMds == mdsSolution
 
     vrpSolution: VRPSolution = getMininumVehicleRouting(
-      seed=seed, allDistances=allDistances, baseDistance=baseDistance,
-      minimumDominatingSet=mdsSolution, timeLimit=vrpSolverTimeLimit,
-      quiet=False)
+      seed=seed, allDistances=instance.distance_matrix,
+      baseDistance=instance.distance_from_base, minimumDominatingSet=mdsSolution,
+      timeLimit=vrpSolverTimeLimit, quiet=False)
 
     assert abs(vrpSolution.vrpCost - ga.get_best_fitness()) < 0.000_001, f"{(vrpSolution.vrpCost, ga.get_best_fitness())}"
     assert abs(vrpSolution.vrpCost - bestVrpSolution.vrpCost) < 0.000_001, f"{(vrpSolution.vrpCost, bestVrpSolution.vrpCost)}"

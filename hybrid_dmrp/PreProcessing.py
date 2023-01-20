@@ -1,8 +1,88 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
-from typing import TextIO
+from .ConstructiveHeurisitc import (RclItem, generateRclBase)
+from zipfile import (ZipFile, ZIP_DEFLATED, is_zipfile)
+from os.path import (basename, dirname, join)
+from typing import (Any, Optional, TextIO)
 from haversine import haversine
+from os import getcwd
+import json
+
+assert dirname(dirname(__file__)) == getcwd(), "Invalid working directory!"
+
+
+class InstanceData(object):
+
+  _CACHE_PARAMS: dict[str, Any] = {
+    "file": join(dirname(dirname(__file__)), "instances", ".cached.zip"),
+    "compression": ZIP_DEFLATED,
+    "compresslevel": 9,
+  }
+
+  def isCached(instanceName: str) -> bool:
+    if not is_zipfile(InstanceData._CACHE_PARAMS["file"]):
+      return False
+
+    with ZipFile(mode="r", **InstanceData._CACHE_PARAMS) as archive:
+      return basename(instanceName) in frozenset(archive.namelist())
+
+  def loadCached(instanceName: str) -> "InstanceData":
+
+    def decoder(_vars: dict[str, Any]) -> InstanceData:
+      return InstanceData(
+        _vars["distance_matrix"],
+        _vars["distance_from_base"],
+        _vars["communication_net"],
+        tuple(_vars["base"]),
+        [(i, j) for (i, j) in _vars["coordenates"]],
+        [RclItem(i, c) for (i, c) in _vars["centralities"]],
+        None,
+      )
+
+    # Load cached
+    with ZipFile(mode="r", **InstanceData._CACHE_PARAMS) as archive:
+      with archive.open(basename(instanceName), "r") as cacheFile:
+        return json.loads(cacheFile.read().decode("UTF-8"), object_hook=decoder)
+
+  def __init__(
+    self,
+    distance_matrix: list[list[float]],
+    distance_from_base: list[float],
+    communication_net: list[list[int]],
+    base: tuple[float, float],
+    coordenates: list[tuple[float, float]],
+    centralities: list[RclItem],
+    instanceName: Optional[str],
+  ) -> None:
+
+    self.base: tuple[float, float] = base
+    """The base location."""
+
+    self.coordenates: list[tuple[float, float]] = coordenates
+    """Each node location (excluding the base)."""
+
+    self.distance_matrix: list[list[float]] = distance_matrix
+    """Square matrix with all distance between vertices."""
+
+    self.distance_from_base: list[float] = distance_from_base
+    """Array of distances from the base for each vertex."""
+
+    self.communication_net: list[list[int]] = communication_net
+    """Sparse matrix containing the reach graph."""
+
+    self.centralities: list[RclItem] = centralities
+    """Array containing all non-base vertices index/ID and respective eigenvector centrality value."""
+
+    # Loaded cached
+    if instanceName == None:
+      return
+
+    # Save cached
+    with ZipFile(mode="a", **InstanceData._CACHE_PARAMS) as archive:
+      with archive.open(basename(instanceName), "w") as cacheFile:
+        asDict: dict[str, Any] = vars(self)
+        cacheFile.write(json.dumps(asDict, ensure_ascii=False).encode("UTF-8"))
 
 
 def read_elem(instance: TextIO) -> list[str]:
@@ -10,7 +90,10 @@ def read_elem(instance: TextIO) -> list[str]:
     return instance.read().split()
 
 
-def read_input(instance: TextIO):
+def read_input(instance: TextIO) -> InstanceData:
+  if InstanceData.isCached(instance.name):
+    return InstanceData.loadCached(instance.name)
+
   file_it = iter(read_elem(instance))
 
   str_nb_nodes = next(file_it)
@@ -42,12 +125,14 @@ def read_input(instance: TextIO):
                                                 str_communicationRadius,
                                                 coordenates)  #Lista de elementos dentro do raio de comunicação
 
-  return (
+  return InstanceData(
     distance_matrix,
     distance_from_base,
     communication_net,
     base,
     coordenates,
+    centralities=generateRclBase(distance_matrix, communication_net),
+    instanceName=instance.name,
   )
 
 
