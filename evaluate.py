@@ -395,8 +395,9 @@ def printStatistics() -> None:
 
     maxRuns = max(maxRuns, len(instanceDict[instanceName]["|MDS|"]))
 
+    del absolutePath
+
   del _instanceFileNameList
-  del absolutePath
 
   # Create a DataFrame
   statisticsDict: dict[str, list[float]] = {
