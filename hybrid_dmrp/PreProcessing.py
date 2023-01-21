@@ -95,7 +95,7 @@ def read_input(instance: TextIO) -> InstanceData:
   startTime: float = timeit.default_timer()
 
   if InstanceData.isCached(instance.name):
-    print(f"Loading cached: {instance.name} ... ", end="")
+    print(f"Loading cached: {basename(instance.name)} ... ", end="")
     instanceData: InstanceData = InstanceData.loadCached(instance.name)
     print(f"Done after:  {timeit.default_timer() - startTime:.2f} s")
     return instanceData

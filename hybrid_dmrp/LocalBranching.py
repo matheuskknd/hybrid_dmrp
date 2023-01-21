@@ -245,13 +245,17 @@ def bounded_kara2011_F2(solution: HybridBrkgaSolution, *, seed: int,
     ################################
 
     # Remaining time in seconds: up to 20~60 minutes
-    if len(N) < 1_000:
+    if len(allDistances) < 1_000:
       timelimit: int = math.ceil(max(1, 20*60 - solution.gaElapsedSeconds))
       # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
+      workmem = 8_000  # CPX_PARAM_WORKMEM: 8 GB
+      m_emphasis = 0  # CPXPARAM_Emphasis_Memory: CPX_OFF
 
     else:
       timelimit: int = math.ceil(max(1, 60*60 - solution.gaElapsedSeconds))
       # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
+      workmem = 500  # CPX_PARAM_WORKMEM: 500 MB
+      m_emphasis = 1  # CPXPARAM_Emphasis_Memory: CPX_ON
 
     # https://ibmdecisionoptimization.github.io/docplex-doc/cp/docplex.cp.parameters.py.html
     # It seems to be not the correct parameterization: https://stackoverflow.com/q/69464336
@@ -266,7 +270,13 @@ def bounded_kara2011_F2(solution: HybridBrkgaSolution, *, seed: int,
     context.cplex_parameters.threads = 0  # CPXPARAM_Threads: MAX
     context.cplex_parameters.mip.tolerances.uppercutoff = solution.vrpCost  # CPXPARAM_MIP_Tolerances_UpperCutoff
 
-    context.cplex_parameters.workmem = 4_000  # CPX_PARAM_WORKMEM: 4 GB
+    # https://xavier-nodet.medium.com/cplex-usage-of-ram-when-solving-continuous-models-3e0170c92f16
+    # https://xavier-nodet.medium.com/cplex-memory-usage-for-mips-4eb737f89e7a
+    context.cplex_parameters.emphasis.memory = m_emphasis  # CPXPARAM_Emphasis_Memory
+    context.cplex_parameters.lpmethod = 6  # CPXPARAM_LPMethod: CPX_ALG_CONCURRENT
+    context.cplex_parameters.parallel = -1  # CPXPARAM_Parallel: CPX_PARALLEL_OPPORTUNISTIC
+
+    context.cplex_parameters.workmem = workmem  # CPX_PARAM_WORKMEM
     context.cplex_parameters.mip.strategy.file = 3  # CPX_PARAM_NODEFILEIND: Disk+Compressed
     context.cplex_parameters.mip.limits.treememory = 480_000  # CPX_PARAM_TRELIM: 480 GB
     context.cplex_parameters.mip.strategy.variableselect = 3  # CPX_PARAM_VARSEL: CPX_VARSEL_STRONG
