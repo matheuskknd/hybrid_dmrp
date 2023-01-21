@@ -183,7 +183,7 @@ def solveHybridBrkga(instance: InstanceData, *, seed: int, num_generations: int,
   ga.initialize()
 
   evolutionPerGen[0] = ga.get_best_fitness()
-  TIME_LIMIT: int = 5 * 60  # Up to 5 minutes
+  TIME_LIMIT: int = (5 if len(instance.communication_net) < 1_000 else 20) * 60  # Up to 5~20 minutes
 
   for i in range(1, num_generations + 1):
     ga.evolve(num_generations=1)

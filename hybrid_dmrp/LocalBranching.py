@@ -244,9 +244,14 @@ def bounded_kara2011_F2(solution: HybridBrkgaSolution, *, seed: int,
     ###### Solver Parameters  ######
     ################################
 
-    # Remaining time in seconds: up to 20 minutes
-    timelimit: int = math.ceil(20*60 - min(20*60 - 1, solution.gaElapsedSeconds))
-    # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
+    # Remaining time in seconds: up to 20~60 minutes
+    if len(N) < 1_000:
+      timelimit: int = math.ceil(max(1, 20*60 - solution.gaElapsedSeconds))
+      # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
+
+    else:
+      timelimit: int = math.ceil(max(1, 60*60 - solution.gaElapsedSeconds))
+      # dettimelimit: int = math.ceil(0.99 * TICKS_PER_SECOND * timelimit)
 
     # https://ibmdecisionoptimization.github.io/docplex-doc/cp/docplex.cp.parameters.py.html
     # It seems to be not the correct parameterization: https://stackoverflow.com/q/69464336
@@ -260,6 +265,11 @@ def bounded_kara2011_F2(solution: HybridBrkgaSolution, *, seed: int,
     context.cplex_parameters.read.datacheck = 0  # CPXPARAM_Read_DataCheck: CPX_DATACHECK_OFF
     context.cplex_parameters.threads = 0  # CPXPARAM_Threads: MAX
     context.cplex_parameters.mip.tolerances.uppercutoff = solution.vrpCost  # CPXPARAM_MIP_Tolerances_UpperCutoff
+
+    context.cplex_parameters.workmem = 4_000  # CPX_PARAM_WORKMEM: 4 GB
+    context.cplex_parameters.mip.strategy.file = 3  # CPX_PARAM_NODEFILEIND: Disk+Compressed
+    context.cplex_parameters.mip.limits.treememory = 480_000  # CPX_PARAM_TRELIM: 480 GB
+    context.cplex_parameters.mip.strategy.variableselect = 3  # CPX_PARAM_VARSEL: CPX_VARSEL_STRONG
 
     del context
     del timelimit
