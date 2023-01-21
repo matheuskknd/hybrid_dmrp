@@ -7,6 +7,7 @@ from os.path import (basename, dirname, join)
 from typing import (Any, Optional, TextIO)
 from haversine import haversine
 from os import getcwd
+import timeit
 import json
 
 assert dirname(dirname(__file__)) == getcwd(), "Invalid working directory!"
@@ -91,8 +92,13 @@ def read_elem(instance: TextIO) -> list[str]:
 
 
 def read_input(instance: TextIO) -> InstanceData:
+  startTime: float = timeit.default_timer()
+
   if InstanceData.isCached(instance.name):
-    return InstanceData.loadCached(instance.name)
+    print(f"Loading cached: {instance.name} ... ", end="")
+    instanceData: InstanceData = InstanceData.loadCached(instance.name)
+    print(f"Done after:  {timeit.default_timer() - startTime:.2f} s")
+    return instanceData
 
   file_it = iter(read_elem(instance))
 
@@ -125,7 +131,7 @@ def read_input(instance: TextIO) -> InstanceData:
                                                 str_communicationRadius,
                                                 coordenates)  #Lista de elementos dentro do raio de comunicação
 
-  return InstanceData(
+  instanceData: InstanceData = InstanceData(
     distance_matrix,
     distance_from_base,
     communication_net,
@@ -134,6 +140,9 @@ def read_input(instance: TextIO) -> InstanceData:
     centralities=generateRclBase(distance_matrix, communication_net),
     instanceName=instance.name,
   )
+
+  print(f"Instance fully read after:  {timeit.default_timer() - startTime:.2f} s")
+  return instanceData
 
 
 def haversineCalculation(point1, point2):
