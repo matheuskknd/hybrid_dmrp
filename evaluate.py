@@ -1,7 +1,13 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
-from hybrid_dmrp import (HybridDMRPSolution, solveHybridDMRP, CplexStatusCodeEnum)
+from hybrid_dmrp import (
+  HybridDMRPSolution,
+  solveHybridDMRP,
+  CplexStatusCodeEnum,
+  InstanceData,
+)
+
 from os.path import (abspath, basename, dirname, join, exists)
 from contextlib import (redirect_stdout, redirect_stderr)
 from hybrid_dmrp.PreProcessing import read_input
@@ -482,20 +488,14 @@ def printStatistics() -> None:
         continue
 
       with open(instanceFileName, "r", encoding="UTF-8") as file:
-        (
-          all_distances,
-          base_distance,
-          _,
-          base,
-          coordenates,
-        ) = read_input(file)
+        instanceData: InstanceData = read_input(file)
 
-        solution["allDistances"] = all_distances
-        solution["baseDistance"] = base_distance
-        solution["coordenates"] = coordenates
-        solution["base"] = base
+        solution["allDistances"] = instanceData.distance_matrix
+        solution["baseDistance"] = instanceData.distance_from_base
+        solution["coordenates"] = instanceData.coordenates
+        solution["base"] = instanceData.base
 
-      del (all_distances, base_distance, _, base, coordenates)
+      del instanceData
       del file
 
       # Rebuild the solution object

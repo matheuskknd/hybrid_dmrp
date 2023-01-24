@@ -3,3 +3,4 @@
 
 from .api import (HybridDMRPSolution, solveHybridDMRP)  # type: ignore
 from .CplexStatusCodeEnum import CplexStatusCodeEnum  # type: ignore
+from .PreProcessing import InstanceData  # type: ignore
