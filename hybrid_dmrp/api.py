@@ -82,9 +82,7 @@ def solveHybridDMRP(instance: TextIO, *, quiet: bool, seed: int,
 
     if hybridBrkgaSolution.vrpStatus == LSSolutionStatus.FEASIBLE:
       localBranchingSolution: LocalBranchingSolution = solveLocalBranching(
-        hybridBrkgaSolution, seed=seed,
-        allDistances=instanceData.distance_matrix,
-        baseDistance=instanceData.distance_from_base, isCLI=isCLI, quiet=quiet)
+        instanceData, hybridBrkgaSolution, seed=seed, isCLI=isCLI, quiet=quiet)
 
     else:
       localBranchingSolution: LocalBranchingSolution = LocalBranchingSolution()
