@@ -16,6 +16,7 @@ from typing import (Any, Generator, Optional)
 from docplex.mp.engine import JobSolveStatus
 from .PreProcessing import InstanceData
 from networkx import MultiDiGraph
+from os.path import exists
 import itertools
 import networkx
 import timeit
@@ -393,9 +394,9 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
                        *, seed: int, isCLI: bool = False,
                        quiet: bool = True) -> LocalBranchingSolution:
   """
-    This function implements a modified version of the MDRPwLA programming\
-    formulation described in [I. Morais et al., 2022], by: adding a new\
-    Local Branching constraint based on [Souto et al., 2021].
+    This function implements a modified version of the MDRPwLA integer linear\
+    programming formulation described in [I. Morais et al., 2022], by: \
+    adding a new Local Branching constraint based on [Souto et al., 2021].
 
     This formulation has an order of O(n^3) variables and also an order\
     of O(n^3) constraints.
@@ -475,13 +476,13 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
 
     # Constraint 3 - neighborhood coverage - O(n^3)
     model.add_constraints_(
-      model.sum_vars(Y[j, k]
-                     for j in itertools.chain((i, ), neighborhood[i - 1])
+      model.sum_vars(Y[j + 1, k]
+                     for j in itertools.chain((i - 1, ), neighborhood[i - 1])
                      for k in K) >= 1
       for i in V_)
 
-    # Constraint 4 - at most one vehicle can visit a node - O(n^2)
-    model.add_constraints_(model.sum_vars(Y[i, k] for k in K) <= 1 for i in V)
+    # Constraint 4 (fixed) - at most one vehicle can visit non base nodes - O(n^2)
+    model.add_constraints_(model.sum_vars(Y[i, k] for k in K) <= 1 for i in V_)
 
     # Constraint 5 - the vehicle must leave the node it visited - O(n^3)
     model.add_constraints_(
@@ -491,7 +492,7 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
       for i in V
       for k in K)
 
-    # Constraint 6 - the vehicle must go to the node it visited - O(n^3)
+    # Constraint 6 - the vehicle must go to the node it visits - O(n^3)
     model.add_constraints_(
       model.sum_vars(X[j, i, k]
                      for j in V
@@ -502,17 +503,17 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
     # Constraint 7 - at least one vehicle must leave the base - O(n)
     model.add_constraint_(model.sum_vars(Y[0, k] for k in K) >= 1)
 
-    # Constraint 8 - flow conservation: the flow variable increases by 1 for each visited node - O(n^3)
+    # Constraint 8 - flow conservation: the Z variable values increase by 1 for each visited node - O(n^3)
     model.add_constraints_(
       model.sum_vars(Z[i, j, k] for j in V if i != j) == model.sum_vars(
         Z[j, i, k] for j in V if i != j) + Y[i, k] for i in V_ for k in K)
 
-    # Constraint 9 - flow conservation: the variables Z reach at most the number of visited nodes - O(n^3)
+    # Constraint 9 - flow conservation: the Z variable values reach at most the number of visited nodes - O(n^3)
     model.add_constraints_(Z[i, j, k] <= model.sum_vars(Y[l, k]
                                                         for l in V)
                            for ((i, j), k) in itertools.product(A(), K))
 
-    # Constraint 10 - flow conservation: the variables Z are 0 if the node is not visited, or |V| otherwise - O(n^3)
+    # Constraint 10 - flow conservation: the Z variable values are 0 if the node is not visited, or |V| otherwise - O(n^3)
     model.add_constraints_(Z[i, j, k] <= X[i, j, k] * len(V)
                            for ((i, j), k) in itertools.product(A(), K))
 
@@ -589,6 +590,10 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
     # del dettimelimit
     del workmem
     # del emphasis_m
+
+    # Print the Linear Programming model
+    # if not exists("MDRPwLA.lp"):
+    #   model.cplex.write("MDRPwLA.lp")
 
     # Account the time spent running CPLEX
     startTime: float = timeit.default_timer()

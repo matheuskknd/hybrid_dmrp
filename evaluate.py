@@ -104,7 +104,11 @@ def evoCurvePlot(solution: HybridDMRPSolution, evoCurveFileName: str) -> None:
 
 
 def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
-                        graph: MultiDiGraph, scatterFileName: str) -> None:
+                        autonomy: float, graph: MultiDiGraph,
+                        scatterFileName: str) -> None:
+
+  # Auxiliar variables
+  dominatingSet: list[int] = sorted(set(graph).difference({0}))
 
   # List of coordinates of all nodes (including the base)
   locX: list[float] = ([solution.base[0]] +
@@ -113,30 +117,26 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
   locY: list[float] = ([solution.base[1]] +
                        [node[1] for node in solution.coordenateList])
 
-  # All vehicles have the same autonomy (travelling capacity)
-  autonomy: float = 2 * max(solution.baseDistance[i]
-                            for i in solution.minimumDominatingSet)
-
   # Add a title
   pyplot.title("Solution\n"
                f"N = {solution.N}"
-               f", |MDS|= {len(solution.minimumDominatingSet)}"
+               f", |MDS|= {graph.number_of_nodes()-1}"
                f", autonomy={round(autonomy,2)}"
                f", totalCost={round(cost,2)}")
 
   # Draw the nodes location (except the base)
   # Visited nodes are blue
   pyplot.scatter(
-    [locX[i + 1] for i in solution.minimumDominatingSet],
-    [locY[i + 1] for i in solution.minimumDominatingSet],
+    [locX[i] for i in dominatingSet],
+    [locY[i] for i in dominatingSet],
     c="#0000ff",
   )
 
-  # Non visited nodes are black
-  nSet: frozenset[int] = frozenset(range(solution.N))
+  # Non visited nodes are grey
+  nSet: frozenset[int] = frozenset(range(1, solution.N + 1))
   pyplot.scatter(
-    [locX[i + 1] for i in nSet.difference(solution.minimumDominatingSet)],
-    [locY[i + 1] for i in nSet.difference(solution.minimumDominatingSet)],
+    [locX[i] for i in sorted(nSet.difference(dominatingSet))],
+    [locY[i] for i in sorted(nSet.difference(dominatingSet))],
     c="#000000",
     alpha=0.5,
   )
@@ -213,7 +213,7 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
 
 
 def main():
-  print(f"Starting new run... {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')}\n")
+  print(f"Starting new run... {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%fZ')}\n")
 
   # Get the list of instances to run
   instanceDir: str = join(workingDir, "instances")
@@ -296,9 +296,14 @@ def main():
 
       # Save the best solution as a scatter plot
       if not exists(vrpScatterFileName):
+        assert hybridDMRPSolution.vrpGraph.number_of_nodes() - 1 == len(
+          hybridDMRPSolution.minimumDominatingSet)
+
         solutionScatterPlot(
           hybridDMRPSolution,
           hybridDMRPSolution.vrpCost,
+          2 * max(hybridDMRPSolution.baseDistance[i]
+                  for i in hybridDMRPSolution.minimumDominatingSet),
           hybridDMRPSolution.vrpGraph,
           vrpScatterFileName,
         )
@@ -307,6 +312,7 @@ def main():
         solutionScatterPlot(
           hybridDMRPSolution,
           hybridDMRPSolution.babCost,
+          2 * max(hybridDMRPSolution.baseDistance),
           hybridDMRPSolution.babGraph,
           babScatterFileName,
         )
@@ -515,9 +521,14 @@ def printStatistics() -> None:
       # Save the best solution as a scatter plot
       if not exists(vrpScatterFileName):
         print(f"Reprinting {vrpScatterFileName}")
+        assert hybridDMRPSolution.vrpGraph.number_of_nodes() - 1 == len(
+          hybridDMRPSolution.minimumDominatingSet)
+
         solutionScatterPlot(
           hybridDMRPSolution,
           hybridDMRPSolution.vrpCost,
+          2 * max(hybridDMRPSolution.baseDistance[i]
+                  for i in hybridDMRPSolution.minimumDominatingSet),
           hybridDMRPSolution.vrpGraph,
           vrpScatterFileName,
         )
@@ -527,6 +538,7 @@ def printStatistics() -> None:
         solutionScatterPlot(
           hybridDMRPSolution,
           hybridDMRPSolution.babCost,
+          2 * max(hybridDMRPSolution.baseDistance),
           hybridDMRPSolution.babGraph,
           babScatterFileName,
         )
@@ -562,5 +574,5 @@ with open(stdoutLogName, "a+", encoding="UTF-8") as stdoutLog:
 
         # Always print the statistics after running the main evalution
         printStatistics()
-        print(f"Finished run at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+        print(f"Finished run at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%fZ')}")
         print("################")
