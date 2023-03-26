@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.10
 # -*- coding: UTF-8 -*-
 
+from docplex.mp.constants import WriteLevel
 from docplex.mp.model import (
   Context,
   BinaryVarType,
@@ -543,6 +544,84 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
       sum(1 for (i, j) in A() if solution.usedInVrp(i, j)) -
       model.sum_vars(X[i, j, k] for (
         (i, j), k) in itertools.product(A(), K) if solution.usedInVrp(i, j)) <= DELTA)
+
+    ################################
+    ########## MIP START  ##########
+    ################################
+
+    # https://ibmdecisionoptimization.github.io/docplex-doc/mp/docplex.mp.model.html#docplex.mp.model.Model.add_mip_start
+    # https://ibmdecisionoptimization.github.io/docplex-doc/mp/docplex.mp.solution.html#docplex.mp.solution.SolveSolution
+    def createMipStart() -> SolveSolution:
+      babMipStart: SolveSolution = SolveSolution(model, name="babMipStart")
+      vrpGraph: MultiDiGraph = solution.vrpGraph
+      curK: int = -1
+
+      for i in V_:
+        if not vrpGraph.has_edge(0, i):
+          continue
+
+        path: MultiDiGraph = MultiDiGraph()
+        curZ: int = 1
+        curK += 1
+
+        j: int = i
+        i = 0
+
+        while True:
+          outEdge: tuple[int, int] = list(vrpGraph.out_edges(j, data=False))[0]
+
+          # Update the model
+          babMipStart.add_var_value(Y[j, curK], 1)
+          babMipStart.add_var_value(X[i, j, curK], 1)
+          babMipStart.add_var_value(Z[i, j, curK], curZ)
+
+          # Follow the directed graph
+          path.add_edge(i, j)
+          (i, j) = outEdge
+          curZ += 1
+
+          if i == 0:
+            break
+
+        for i in V_:
+          if not path.has_node(i):
+            babMipStart.add_var_value(Y[i, curK], 0)
+
+        for (i, j) in A():
+          if not path.has_edge(i, j):
+            babMipStart.add_var_value(X[i, j, curK], 0)
+            babMipStart.add_var_value(Z[i, j, curK], 0)
+
+      # The remaining vehicles do nothing
+      while curK != K[-1]:
+        curK += 1
+
+        for i in V:
+          babMipStart.add_var_value(Y[i, curK], 0)
+
+        for (i, j) in A():
+          babMipStart.add_var_value(X[i, j, curK], 0)
+          babMipStart.add_var_value(Z[i, j, curK], 0)
+
+      return babMipStart
+
+    # Create a MIP start from the BaB original solution
+    babMipStart: SolveSolution = createMipStart()
+    assert babMipStart.is_feasible_solution(silent=False)
+    assert babMipStart.check_as_mip_start(strong_check=True)
+    # babMipStart.export_as_mst(path=".", basename="babMipStart",
+    #                           write_level=WriteLevel.AllVars)
+
+    babMipStart = model.add_mip_start(
+      babMipStart,
+      write_level=WriteLevel.DiscreteVars,
+      complete_vars=True,
+    )
+
+    assert babMipStart != None, "babMipStart convertion failed!"
+    assert babMipStart.is_feasible_solution(silent=False)
+    assert babMipStart.check_as_mip_start(strong_check=True)
+    del babMipStart
 
     ################################
     ###### Solver Parameters  ######
