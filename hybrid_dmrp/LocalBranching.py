@@ -509,12 +509,12 @@ def bounded_morais2022(instanceData: InstanceData, solution: HybridBrkgaSolution
       model.sum_vars(Z[i, j, k] for j in V if i != j) == model.sum_vars(
         Z[j, i, k] for j in V if i != j) + Y[i, k] for i in V_ for k in K)
 
-    # Constraint 9 - flow conservation: the Z variable values reach at most the number of visited nodes - O(n^3)
+    # Constraint 9 - flow conservation/upper bound: the Z variable values reach at most the number of visited nodes - O(n^3)
     model.add_constraints_(Z[i, j, k] <= model.sum_vars(Y[l, k]
                                                         for l in V)
                            for ((i, j), k) in itertools.product(A(), K))
 
-    # Constraint 10 - flow conservation: the Z variable values are 0 if the node is not visited, or |V| otherwise - O(n^3)
+    # Constraint 10 - flow conservation/lower bound: the Z variable values are 0 if the node is not visited, or |V| otherwise - O(n^3)
     model.add_constraints_(Z[i, j, k] <= X[i, j, k] * len(V)
                            for ((i, j), k) in itertools.product(A(), K))
 
