@@ -11,6 +11,8 @@ from localsolver import (
 
 from typing import (Iterator, Optional, cast)
 from networkx import MultiDiGraph
+from .utils import extended_enum_new
+from unittest.mock import patch
 import networkx
 
 # References
@@ -27,16 +29,18 @@ class VRPSolution:
     return (cost if status == LSSolutionStatus.FEASIBLE or
             status == LSSolutionStatus.OPTIMAL else INFINITY)
 
-  def __init__(self, vrpCost: float,
-               vrpStatus: LSSolutionStatus = LSSolutionStatus.INFEASIBLE,
-               autonomy: float = 0.0, *,
+  def __init__(self, vrpCost: float, vrpStatus: LSSolutionStatus | str |
+               int = LSSolutionStatus.INFEASIBLE, autonomy: float = 0.0, *,
                vrpGraph: MultiDiGraph = MultiDiGraph()) -> None:
 
-    self.vrpCost: float = VRPSolution._adjustCost(vrpCost, vrpStatus)
-    """The VRP solution total cost."""
+    with patch("localsolver.LSSolutionStatus.__new__",
+               new=extended_enum_new(LSSolutionStatus)):
 
-    self.vrpStatus: LSSolutionStatus = vrpStatus
-    """The solver returned status for the VRP solution."""
+      self.vrpStatus: LSSolutionStatus = LSSolutionStatus(vrpStatus)
+      """The solver returned status for the VRP solution."""
+
+    self.vrpCost: float = VRPSolution._adjustCost(vrpCost, self.vrpStatus)
+    """The VRP solution total cost."""
 
     self.autonomy: float = autonomy
     """The vehicle autonomy."""

@@ -16,8 +16,9 @@ from docplex.mp.solution import SolveSolution
 from typing import (Any, Generator, Optional)
 from docplex.mp.engine import JobSolveStatus
 from .PreProcessing import InstanceData
+from .utils import extended_enum_new
 from networkx import MultiDiGraph
-from os.path import exists
+from unittest.mock import patch
 import itertools
 import networkx
 import timeit
@@ -40,8 +41,9 @@ class LocalBranchingSolution(HybridBrkgaSolution):
     } else INFINITY)
 
   def __init__(self, babCost: float = 0,
-               babStatus: JobSolveStatus = JobSolveStatus.UNKNOWN,
-               babStatusCode: CplexStatusCodeEnum = CplexStatusCodeEnum.CPX_STAT_ABORT_USER,
+               babStatus: JobSolveStatus | str | int = JobSolveStatus.UNKNOWN,
+               babStatusCode: CplexStatusCodeEnum | str |
+               int = CplexStatusCodeEnum.CPX_STAT_ABORT_USER,
                babGraph: MultiDiGraph = MultiDiGraph(),
                babElapsedSeconds: float = 0.0, **kwargs: dict[str,
                                                               Any]) -> None:
@@ -49,14 +51,21 @@ class LocalBranchingSolution(HybridBrkgaSolution):
     # Build the parent object
     super().__init__(**kwargs)
 
-    self.babCost: float = LocalBranchingSolution._adjustCost(babCost, babStatus)
+    with patch("docplex.mp.engine.JobSolveStatus.__new__",
+               new=extended_enum_new(JobSolveStatus)):
+
+      self.babStatus: JobSolveStatus = JobSolveStatus(babStatus)
+      """The solver returned status for the Branch and Bound solution."""
+
+    self.babCost: float = LocalBranchingSolution._adjustCost(
+      babCost, self.babStatus)
     """The Branch and Bound solution total cost."""
 
-    self.babStatus: JobSolveStatus = babStatus
-    """The solver returned status for the Branch and Bound solution."""
+    with patch(__name__ + ".CplexStatusCodeEnum.__new__",
+               new=extended_enum_new(CplexStatusCodeEnum)):
 
-    self.babStatusCode: CplexStatusCodeEnum = babStatusCode
-    """The solver returned status code for the Branch and Bound solution."""
+      self.babStatusCode: CplexStatusCodeEnum = CplexStatusCodeEnum(babStatusCode)
+      """The solver returned status code for the Branch and Bound solution."""
 
     self.babGraph: MultiDiGraph = babGraph
     """A graph (paths) the vehicles must travel in this solution."""
