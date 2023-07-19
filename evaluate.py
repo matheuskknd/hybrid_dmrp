@@ -119,10 +119,10 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
 
   # Add a title
   pyplot.title("Solution\n"
-               f"N = {solution.N}"
+               f"|V| = {solution.N}"
                f", |MDS|= {graph.number_of_nodes()-1}"
-               f", autonomy={round(autonomy,2)}"
-               f", totalCost={round(cost,2)}")
+               f", autonomy={round(autonomy/1000,2)} km"
+               f", totalCost={round(cost/1000,2)} km")
 
   # Draw the nodes location (except the base)
   # Visited nodes are blue
@@ -130,6 +130,7 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
     [locX[i] for i in dominatingSet],
     [locY[i] for i in dominatingSet],
     c="#0000ff",
+    s=1.0,
   )
 
   # Non visited nodes are grey
@@ -139,6 +140,7 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
     [locY[i] for i in sorted(nSet.difference(dominatingSet))],
     c="#000000",
     alpha=0.5,
+    s=1.0,
   )
 
   # Draw all active edges
@@ -168,26 +170,24 @@ def solutionScatterPlot(solution: HybridDMRPSolution, cost: float,
     )
 
   # Draw the base node location
-  pyplot.plot(locX[0], locY[0], c="#ff0000", marker="s")
+  pyplot.plot(locX[0], locY[0], c="#ff0000", marker="s", ms=1.0)
 
   # Calculate the ticks
   xticks: list[float] = [
-    round(min(locX), 4),
-    round((min(locX) + max(locX)) / 2, 4),
-    round(max(locX), 4)
+    round(min(locX), 2),
+    round((min(locX) + max(locX)) / 2, 2),
+    round(max(locX), 2)
   ]
 
   yticks: list[float] = [
-    round(min(locY), 4),
-    round((min(locY) + max(locY)) / 2, 4),
-    round(max(locY), 4)
+    round(min(locY), 2),
+    round((min(locY) + max(locY)) / 2, 2),
+    round(max(locY), 2)
   ]
 
   # Set the labels names, title and finally save it
-  pyplot.ylabel("Latitude")
-  pyplot.xlabel("Longitude")
-  pyplot.xticks(xticks)
-  pyplot.yticks(yticks)
+  pyplot.xticks([], [])
+  pyplot.yticks([], [], rotation=90.0)
 
   # Ref: https://stackoverflow.com/a/34762716
   if len(textList) != 0:
